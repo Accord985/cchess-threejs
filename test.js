@@ -1,18 +1,9 @@
-/**
- * BW 2023.11.13
- * This file draws a Chinese chess piece in animation. If WebGL is not supported,
- *  displays an error message instead.
- *
- * wood picture retrieved from https://kampshardwoods.com/product/white-oak/ &
- *   https://kampshardwoods.com/product/walnut/
- * granite picture from https://en.wikipedia.org/wiki/File:Fj%C3%A6regranitt3.JPG
- * wooden background from https://unsplash.com/photos/brown-parquet-board-wG923J9naFQ?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash
- */
-
 'use strict';
 import * as THREE from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
-import { PieceFactory } from './piece.js';
+import {FontLoader} from 'three/addons/loaders/FontLoader.js';
+import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
+import {ADDITION, SUBTRACTION, Brush, Evaluator} from 'three-bvh-csg';
 // PieceFactory.setProperty(1,'帥');
 
 (function() {
@@ -37,32 +28,9 @@ import { PieceFactory } from './piece.js';
       scene.background = new THREE.TextureLoader().load('/public/whiteoak.jpg');
       setLighting();
 
-      const TYPES = "KGENRCP";
-      for (let i = 1; i <= 3; i++) {
-        for (let j = 0; j < 7; j++) {
-          PieceFactory.setProperty(i,TYPES.charAt(j));
-          let piece = await PieceFactory.createPiece();
-          piece.scale.set(0.3, 0.3, 0.3);
-          piece.position.set(13*j-45,24-12*i,0);
-          scene.add(piece);
-        }
-      }
-      PieceFactory.setProperty(0,'S');
-      let piece = await PieceFactory.createPiece();
-      piece.scale.set(0.3,0.3,0.3);
-      piece.position.set(46,0,0);
-      scene.add(piece);
-
-      // PieceFactory.setProperty(1,'K');
-      // let k = await PieceFactory.createPiece();
-      // k.scale.set(0.3,0.3,0.3);
-      // k.position.set(-16,0,0);
-      // scene.add(k);
-      // PieceFactory.setProperty(3,'P');
-      // let n = await PieceFactory.createPiece();
-      // n.scale.set(0.3,0.3,0.3);
-      // n.position.set(0,0,0);
-      // scene.add(n);
+      let g = new THREE.Group();
+      g.add(await createText());
+      scene.add(g);
 
       camera.position.z = 50;
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -71,6 +39,24 @@ import { PieceFactory } from './piece.js';
       document.getElementById('loading').classList.add('hidden');
       document.body.appendChild(renderer.domElement);
       animate();
+    }
+  }
+
+  async function createText() {
+    let fontLoader = new FontLoader();
+    try {
+      let font = await fontLoader.loadAsync('/public/fz-xingkai.json');
+      const geo = new TextGeometry('馬', {font:font, size: 16, height:0, bevelEnabled:false, bevelThickness:0.4, bevelSize:0.4, bevelOffset:-0.4,bevelSegments:1});
+      geo.computeBoundingBox(); // compute the bounding box and center the character at (0,0)
+      const offsetX = -0.5*(geo.boundingBox.max.x+geo.boundingBox.min.x);
+      const offsetY = -0.5*(geo.boundingBox.max.y+geo.boundingBox.min.y);
+      const text = new Brush(geo, new THREE.MeshLambertMaterial({color: 0x049ef4}));
+      text.position.set(offsetX,offsetY,8);
+      text.updateMatrixWorld();
+      return text;
+    } catch(err) {
+      console.error(err);
+      return new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color:0xffff00}));
     }
   }
 
@@ -105,10 +91,8 @@ import { PieceFactory } from './piece.js';
     requestAnimationFrame(animate);
     scene.traverse((object)=>{
       if (object.isGroup) {
-        let time = Date.now() * 0.001;
-        object.rotation.x = - THREE.MathUtils.degToRad(30+10*Math.sin(2 * time)); // 20-40deg
-        // object.rotation.x += 0.01;
-        // object.rotation.y += 0.01;
+        object.rotation.x += 0.01;
+        object.rotation.y += 0.01;
       }
     });
     renderer.render(scene, camera);
@@ -127,6 +111,4 @@ import { PieceFactory } from './piece.js';
     // const pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
     // scene.add(pointLightHelper);
   }
-
-
 })();
