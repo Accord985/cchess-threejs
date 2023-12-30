@@ -25,16 +25,48 @@ import {ADDITION, SUBTRACTION, Brush, Evaluator} from 'three-bvh-csg';
       addErrorMsg();
       throw new Error('WebGL not supported');
     } else {
-      scene.background = new THREE.TextureLoader().load('/public/whiteoak.jpg');
-      setLighting();
+      scene.background = new THREE.Color(0x777777);
+      //Create a DirectionalLight and turn on shadows for the light
+      const light = new THREE.DirectionalLight( 0xffffff, 10 );
+      light.position.set( 0, 10, 0 ); //default; light shining from top
+      light.castShadow = true; // default false
+      scene.add( light );
 
-      let g = new THREE.Group();
-      g.add(await createText());
-      scene.add(g);
+      //Set up shadow properties for the light
+      light.shadow.mapSize.width = 512; // default
+      light.shadow.mapSize.height = 512; // default
+      light.shadow.camera.near = 0.5; // default
+      light.shadow.camera.far = 500; // default
 
-      camera.position.z = 50;
+      //Create a sphere that cast shadows (but does not receive them)
+      const sphereGeometry = new THREE.SphereGeometry( 5, 32, 32 );
+      const sphereMaterial = new THREE.MeshStandardMaterial( { color: 0xff0000 } );
+      const sphere = new THREE.Mesh( sphereGeometry, sphereMaterial );
+      sphere.castShadow = true; //default is false
+      sphere.receiveShadow = false; //default
+      scene.add( sphere );
+
+      //Create a plane that receives shadows (but does not cast them)
+      const planeGeometry = new THREE.PlaneGeometry( 20, 20, 32, 32 );
+      const planeMaterial = new THREE.MeshStandardMaterial( { color: 0xffffff } )
+      const plane = new THREE.Mesh( planeGeometry, planeMaterial );
+      plane.receiveShadow = true;
+      scene.add( plane );
+
+      //Create a helper for the shadow camera (optional)
+      const helper = new THREE.DirectionalLightHelper( light );
+      scene.add( helper );
+
+      // scene.background = new THREE.TextureLoader().load('/public/whiteoak.jpg');
+      // setLighting();
+
+      // let g = new THREE.Group();
+      // g.add(await createText());
+      // scene.add(g);
+
+      camera.position.z = 5;
       renderer.setSize(window.innerWidth, window.innerHeight);
-      window.addEventListener('resize', onWindowResize);
+      // window.addEventListener('resize', onWindowResize);
 
       document.getElementById('loading').classList.add('hidden');
       document.body.appendChild(renderer.domElement);

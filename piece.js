@@ -1,6 +1,6 @@
 /**
  *
- * boundingbox is 39*39*16
+ * boundingbox is 40*40*16
  */
 
 'use strict';
@@ -10,7 +10,7 @@ import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import {SUBTRACTION, Brush, Evaluator} from 'three-bvh-csg';
 
 export const PieceFactory = (function() {
-  const SEGMENTS = 30; // take this number of segments when dealing with circles in the model
+  const SEGMENTS = 32; // take this number of segments when dealing with circles in the model
   const TEAMS = [
     new THREE.Color(0x666666), // grey/team0(stone)
     new THREE.Color(0xcc3333), // red/team1
@@ -39,7 +39,7 @@ export const PieceFactory = (function() {
    * font options. Should only be integers 1 or 2
    *  1=lishu, 2=xingkai
    */
-  const FONT_TYPE = 2;
+  const FONT_TYPE = 1;
 
   /**
    * texture options. Should only be integers
@@ -98,7 +98,7 @@ export const PieceFactory = (function() {
     map.colorSpace = THREE.SRGBColorSpace; // needed for colored models
     map.repeat.set(repeatX, repeatY);
     map.offset.set(offsetX, offsetY);
-    return new THREE.MeshPhongMaterial({map: map, side: THREE.FrontSide}); // wireframe:true
+    return new THREE.MeshPhongMaterial({map: map, side: THREE.FrontSide, shadowSide: THREE.DoubleSide}); // wireframe:true
   }
 
   /**
@@ -107,7 +107,7 @@ export const PieceFactory = (function() {
  */
   function createSide() {
     const sideArc = new THREE.Path();
-    sideArc.absellipse(15,0,4.5,8,-Math.PI/2,Math.PI/2);
+    sideArc.absellipse(15.5,0,4.5,8,-Math.PI/2,Math.PI/2);
     const points = sideArc.getSpacedPoints(10); // 10 point samples on the arc, evenly spaced
 
     // select random region in the original picture to generate the material
@@ -115,6 +115,7 @@ export const PieceFactory = (function() {
     const side = new THREE.Mesh(new THREE.LatheGeometry(points, SEGMENTS), sideMat);
     side.rotation.x = Math.PI/2;
     side.rotation.y = Math.PI;
+    side.castShadow = true;
     return side;
   }
 
@@ -127,6 +128,7 @@ export const PieceFactory = (function() {
     group.add(side);
 
     if (ENGRAVE >= 0) {
+      surfaces.castShadow = true;
       group.add(surfaces);
       group.add(carve);
       group.add(text);
@@ -134,6 +136,7 @@ export const PieceFactory = (function() {
       const evaluator = new Evaluator();
       let result = evaluator.evaluate(surfaces, carve, SUBTRACTION);
       result = evaluator.evaluate(result, text, SUBTRACTION);
+      result.castShadow = true;
       group.add(result);
     }
     return group;
@@ -145,7 +148,7 @@ export const PieceFactory = (function() {
    */
   function createSurfacesBrush() {
     const surfaceMat = generateMaterial(0.25, 0.25, 0.75*Math.random(), 0.75*Math.random());
-    const surfaces = new Brush(new THREE.CylinderGeometry(15, 15, 16, SEGMENTS), surfaceMat);
+    const surfaces = new Brush(new THREE.CylinderGeometry(15.5, 15.5, 16, SEGMENTS), surfaceMat);
     surfaces.rotation.y = 2 * Math.PI / SEGMENTS * Math.floor(SEGMENTS * Math.random());
     surfaces.rotation.x = Math.PI/2;
     surfaces.updateMatrixWorld();

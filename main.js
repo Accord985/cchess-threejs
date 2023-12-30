@@ -13,7 +13,6 @@
 import * as THREE from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
 import { PieceFactory } from './piece.js';
-// PieceFactory.setProperty(1,'帥');
 
 (function() {
   window.addEventListener('load', init);
@@ -34,38 +33,38 @@ import { PieceFactory } from './piece.js';
       addErrorMsg();
       throw new Error('WebGL not supported');
     } else {
-      scene.background = new THREE.TextureLoader().load('/public/whiteoak.jpg');
+      scene.background = new THREE.TextureLoader().load('/public/background.jpg');
+
+      const boardGeo = new THREE.BoxGeometry(46,51.8,4); // chessboard:45*50
+      const texture = new THREE.TextureLoader().load('/public/whiteoak.jpg');
+
+      const board = new THREE.Mesh(boardGeo, new THREE.MeshPhongMaterial({color: 0xffffff,map:texture}));
+      board.position.set(0,0.4,-3.2); // piece height: 2.4, board height: 4. move upward so that the up & bottom margin seem to be the same length
+      // board.rotation.x = Math.PI;
+      board.receiveShadow = true;
+      scene.add(board);
+
       setLighting();
+      const SCALE = 4.5/40;
 
       const TYPES = "KGENRCP";
-      for (let i = 1; i <= 3; i++) {
-        for (let j = 0; j < 7; j++) {
-          PieceFactory.setProperty(i,TYPES.charAt(j));
+      for (let i = 0; i < 9; i++) {
+        for (let j = 0; j < 10; j++) {
+          PieceFactory.setProperty(Math.floor(1+2*Math.random()),TYPES.charAt(Math.floor(7*Math.random())));
           let piece = await PieceFactory.createPiece();
-          piece.scale.set(0.3, 0.3, 0.3);
-          piece.position.set(13*j-45,24-12*i,0);
+          piece.scale.set(SCALE, SCALE, SCALE);
+          piece.position.set(5*i-20,5*j-22.5,0);
           scene.add(piece);
         }
       }
-      PieceFactory.setProperty(0,'S');
-      let piece = await PieceFactory.createPiece();
-      piece.scale.set(0.3,0.3,0.3);
-      piece.position.set(46,0,0);
-      scene.add(piece);
 
-      // PieceFactory.setProperty(1,'K');
-      // let k = await PieceFactory.createPiece();
-      // k.scale.set(0.3,0.3,0.3);
-      // k.position.set(-16,0,0);
-      // scene.add(k);
-      // PieceFactory.setProperty(3,'P');
-      // let n = await PieceFactory.createPiece();
-      // n.scale.set(0.3,0.3,0.3);
-      // n.position.set(0,0,0);
-      // scene.add(n);
-
-      camera.position.z = 50;
+      camera.position.z = 50*Math.cos(Math.PI/9);
+      camera.position.y = -50*Math.sin(Math.PI/9);
+      camera.lookAt(0,0,0);
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(3); // my devicePixelRatio is 1.5. 3 will be ultra HD
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       window.addEventListener('resize', onWindowResize);
 
       document.getElementById('loading').classList.add('hidden');
@@ -106,7 +105,10 @@ import { PieceFactory } from './piece.js';
     scene.traverse((object)=>{
       if (object.isGroup) {
         let time = Date.now() * 0.001;
-        object.rotation.x = - THREE.MathUtils.degToRad(30+10*Math.sin(2 * time)); // 20-40deg
+        // object.rotation.x = - THREE.MathUtils.degToRad(10+10*Math.sin(2 * time)); // 0-20deg
+        // object.position.z = 1.5+1.5*Math.sin(2*time); // 0-3
+        // let scale = (4.7+0.2*Math.sin(2*time))/40; // 4.5-4.9
+        // object.scale.set(scale,scale,scale);
         // object.rotation.x += 0.01;
         // object.rotation.y += 0.01;
       }
@@ -118,14 +120,20 @@ import { PieceFactory } from './piece.js';
    * sets up the lighting within the scene.
    */
   function setLighting() {
-    const ambientLight = new THREE.AmbientLight(0xcccccc, 3);
-    scene.add(ambientLight);
-    const pointLight = new THREE.PointLight(0xffffff, 3.5, 0, 0);
-    pointLight.position.set(-5,10,40);
-    scene.add(pointLight);
-    // const sphereSize = 1;
-    // const pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
-    // scene.add(pointLightHelper);
+    const environmentLight = new THREE.AmbientLight(0xcccccc, 2);
+    scene.add(environmentLight);
+    const light = new THREE.DirectionalLight(0xffffff, 2.5);
+    light.position.set(-20,10,40); // direction: from position to (0,0,0) [default]
+    light.castShadow = true;
+    light.shadow.camera.left = -25; // these allow the light to cast shadow for everything that's within the camera
+    light.shadow.camera.right = 25;
+    light.shadow.camera.top = 30;
+    light.shadow.camera.bottom = -30;
+    light.shadow.mapSize.set(256,256);
+    scene.add(light);
+
+    // const helper = new THREE.CameraHelper(light.shadow.camera);
+    // scene.add(helper);
   }
 
 
