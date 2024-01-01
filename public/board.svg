@@ -13,9 +13,18 @@
     line {
       stroke: black;
     }
+    text {
+      font-family: "fz-haiti-kai", fangsong;
+      font-size: 80px;
+      font-weight: bold;
+    }
+    @font-face {
+      font-family: "fz-haiti-kai";
+      src: local("方正字迹-海体楷书繁体"), url("FZZJ-HTKSFW.TTF");
+    }
   </style>
   <!-- outer bound: left-top: 30,30; bottom-right: 870,970 -->
-  <rect x="30" y="30" width="840" height="940" stroke-width="15" />
+  <rect x="30" y="30" width="840" height="940" stroke-width="15" fill="white" />
   <!-- inner bound: left-top: 50,50; bottom-right: 850,950 -->
   <rect x="50" y="50" width="800" height="900" stroke-width="10" />
 
@@ -123,4 +132,8 @@
   <!-- (850, 650L) -->
   <polyline points="820,642 840,642 840,622" />
   <polyline points="820,658 840,658 840,678" />
+
+  <!-- three.js does not seem to support custom font in svg -->
+  <!-- <text x="200" y="530">楚河</text>
+  <text x="550" y="530">汉界</text> -->
 </svg>

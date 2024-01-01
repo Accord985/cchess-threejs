@@ -71,6 +71,7 @@ export const PieceFactory = (function() {
     let carve = createCarveBrush();
     let text = await createTextBrush();
     let group = combineAsGroup(side,surfaces,carve,text);
+    group.name = "piece";
     return group;
   }
 

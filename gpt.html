@@ -1,0 +1,67 @@
+<!-- THANK YOU CHATGPT FOR GENERATING THIS CODE LOL -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinese Chess Piece</title>
+    <script type="module">
+        import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r127/build/three.module.js';
+
+        function createChineseChessPiece() {
+            const group = new THREE.Group();
+
+            // Body
+            const bodyGeometry = new THREE.CylinderGeometry(1, 1, 2, 32);
+            const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0x996633 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            group.add(body);
+
+            // Top Sphere
+            const topGeometry = new THREE.SphereGeometry(1, 32, 32);
+            const topMaterial = new THREE.MeshBasicMaterial({ color: 0x996633 });
+            const topSphere = new THREE.Mesh(topGeometry, topMaterial);
+            topSphere.position.set(0, 1, 0);
+            group.add(topSphere);
+
+            // Bottom Sphere
+            const bottomGeometry = new THREE.SphereGeometry(1, 32, 32);
+            const bottomMaterial = new THREE.MeshBasicMaterial({ color: 0x996633 });
+            const bottomSphere = new THREE.Mesh(bottomGeometry, bottomMaterial);
+            bottomSphere.position.set(0, -1, 0);
+            group.add(bottomSphere);
+
+            return group;
+        }
+
+        function init() {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            const chessPiece = createChineseChessPiece();
+            scene.add(chessPiece);
+
+            camera.position.z = 5;
+
+            const animate = function () {
+                requestAnimationFrame(animate);
+
+                chessPiece.rotation.x += 0.01;
+                chessPiece.rotation.y += 0.01;
+
+                renderer.render(scene, camera);
+            };
+
+            animate();
+        }
+
+        init();
+    </script>
+</head>
+<body>
+</body>
+</html>
+
