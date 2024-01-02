@@ -8,7 +8,7 @@
  * granite picture from https://en.wikipedia.org/wiki/File:Fj%C3%A6regranitt3.JPG
  * wooden background from https://unsplash.com/photos/brown-parquet-board-wG923J9naFQ?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash
  *
- * // TODO: Code Quality!!!
+ * // TODO: Documentation!!! Add the mark as I hover.
  */
 
 'use strict';
