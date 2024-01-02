@@ -37,9 +37,10 @@ export const PieceFactory = (function() {
 
   /**
    * font options. Should only be integers 1 or 2
-   *  1=lishu, 2=xingkai
+   *  1=lishu, 2=xingkai, 3=yankai
+   * // TODO: 新魏体
    */
-  const FONT_TYPE = 1;
+  const FONT_TYPE = 3;
 
   /**
    * texture options. Should only be integers
@@ -71,7 +72,7 @@ export const PieceFactory = (function() {
     let carve = createCarveBrush();
     let text = await createTextBrush();
     let group = combineAsGroup(side,surfaces,carve,text);
-    group.name = "piece";
+    group.name = "piece-"+team+type;
     return group;
   }
 
@@ -99,7 +100,7 @@ export const PieceFactory = (function() {
     map.colorSpace = THREE.SRGBColorSpace; // needed for colored models
     map.repeat.set(repeatX, repeatY);
     map.offset.set(offsetX, offsetY);
-    return new THREE.MeshPhongMaterial({map: map, side: THREE.FrontSide, shadowSide: THREE.DoubleSide}); // wireframe:true
+    return new THREE.MeshPhongMaterial({map: map, side: THREE.FrontSide, shadowSide: THREE.DoubleSide, shininess:1000}); // wireframe:true
   }
 
   /**
@@ -182,22 +183,24 @@ export const PieceFactory = (function() {
     const fontLoader = new FontLoader();
     // restricted char set: (within parenthesis are json file names)
     // 方正行楷(fz-xingkai)&方正刘炳森隶书(fz-lbs-lishu)：帥將王仕士侍相象像馬車炮兵卒勇岩
-    // 海体楷书(fz-ht-kai)：楚河汉界
-    let fontName = 'nonexistent';
-    if (FONT_TYPE === 1) {
-      fontName = 'fz-lbs-lishu';
-    } else if (FONT_TYPE === 2) {
-      fontName = 'fz-xingkai';
-    }
+    const FONTS = ['fz-lbs-lishu', 'fz-xingkai', 'ar-yankai'];
+    let fontName = FONTS[FONT_TYPE - 1];
     try {
-      let font = await fontLoader.loadAsync('/public/'+fontName+'.json'); // TODO: use regex
+      let font = await fontLoader.loadAsync('/public/fonts/'+fontName+'.json'); // TODO: use regex
       let char = CHARACTERS[type].charAt(team-1) || CHARACTERS[type].charAt(0); // 'a' || 's' => 'a'; 's'.charAt(2) => ''; '' || 's' => 's'
-      const geo = new TextGeometry(char, {font:font, size: 16, height:0, bevelEnabled:ENGRAVE !== 0, bevelThickness:0.4, bevelSize:0.4, bevelOffset:-0.4,bevelSegments:1});
-      geo.computeBoundingBox(); // compute the bounding box and center the character at (0,0)
-      const offsetX = -0.5*(geo.boundingBox.max.x+geo.boundingBox.min.x);
-      const offsetY = -0.5*(geo.boundingBox.max.y+geo.boundingBox.min.y);
+      const settings = {
+        font:font,
+        size: 16,
+        height:0,
+        bevelEnabled: true,
+        bevelThickness: (ENGRAVE === 0) ? 0 : 0.4,
+        bevelSize: 0.4,
+        bevelOffset: (FONT_TYPE === 3) ? -0.4 : -0.2,
+        bevelSegments: 1
+      };
+      const geo = new TextGeometry(char, settings);
       const text = new Brush(geo, new THREE.MeshLambertMaterial({color: TEAMS[team]}));
-      text.position.set(offsetX,offsetY,8.01);
+      centerMeshAt(text, 0, 0, 8.01);
       text.updateMatrixWorld();
       return text;
     } catch(err) {
@@ -206,8 +209,24 @@ export const PieceFactory = (function() {
     }
   }
 
+  /**
+   * move a given mesh so that the center of it is the given coordinates.
+   * @param {} mesh
+   * @param {*} x
+   * @param {*} y
+   * @param {float} z
+   */
+  function centerMeshAt(mesh, x, y, z) {
+    const geometry = mesh.geometry;
+    geometry.computeBoundingBox(); // compute the bounding box and center the character at (0,0)
+    const offsetX = x - 0.5 * (geometry.boundingBox.max.x + geometry.boundingBox.min.x);
+    const offsetY = y - 0.5 * (geometry.boundingBox.max.y + geometry.boundingBox.min.y);
+    const offsetZ = z - 0.5 * (geometry.boundingBox.max.z + geometry.boundingBox.min.z);
+    mesh.position.set(offsetX, offsetY, offsetZ);
+  }
+
   return {
     setProperty: setProperty,
-    createPiece: createPiece
+    createPiece: createPiece,
   };
 })();
