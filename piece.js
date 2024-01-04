@@ -1,6 +1,10 @@
 /**
  *
  * boundingbox is 40*40*16
+ * // TODO: try prototype but not the factory
+ * // TODO: also make a 'class' for the board (to store the positions & calculate legal moves)
+ * // TODO: add AnimationClip, KeyframeTrack to the pieces (move)
+ * // TODO: use clone() to improve efficiency. store the already produced piece ({1K:Mesh, 1G: Mesh, 1E: undefined, ...})
  */
 
 'use strict';
@@ -33,14 +37,14 @@ export const PieceFactory = (function() {
    *  -1=char engraved inwards (there is precision & loading efficiency issues
    *  for this); 1=char protruding outwards; 0=flat char
    */
-  const ENGRAVE = 1;
+  const ENGRAVE = -1;
 
   /**
    * font options. Should only be integers 1 or 2
    *  1=lishu, 2=xingkai, 3=yankai
    * // TODO: 新魏体
    */
-  const FONT_TYPE = 3;
+  const FONT_TYPE = 1;
 
   /**
    * texture options. Should only be integers

@@ -9,6 +9,7 @@
  * wooden background from https://unsplash.com/photos/brown-parquet-board-wG923J9naFQ?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash
  *
  * // TODO: Documentation!!! Add the mark as I hover.
+ * // TODO: add drag mode, clean the code again, combine method used once
  */
 
 'use strict';
@@ -323,12 +324,12 @@ import {PieceFactory} from './piece.js';
     return null;
   }
 
-  function forAllPiece(func) {
+  function clearHighlight() {
     for (let i = 0; i < 10; i++) {
       for (let j = 0; j < 9; j++) {
         let piece = getPieceInPos({column:j,row:i});
         if (piece) {
-          func(piece);
+          setHighlight(piece, 0x000000);  // black highlight=no effect
         }
       }
     }
@@ -374,7 +375,7 @@ import {PieceFactory} from './piece.js';
 
     let position = findContactPos();
     let hovered = getPieceInPos(position);
-    forAllPiece((piece) => {setHighlight(piece, 0x000000);}); // black highlight=no effect
+    clearHighlight();
     if (hovered) {
       setHighlight(hovered, 0x996600);
     }
@@ -382,9 +383,19 @@ import {PieceFactory} from './piece.js';
   }
 
   function setHighlight(piece, color) {
+    // deal with the mesh and brush differently
+    // engraved upwards/flat: has array of children with material
     let components = piece.children;
     for (let i = 0; i < components.length; i++) {
-      components[i].material.emissive.setHex(color);
+      if (components[i].isBrush) { // true for Brush, undefined for Mesh
+        // Brushes' material is an Array of Material
+        let materials = components[i].material;
+        for (let j = 0; j < materials.length; j++) {
+          materials[j].emissive.setHex(color);
+        }
+      } else {
+        components[i].material.emissive.setHex(color);
+      }
     }
   }
 
