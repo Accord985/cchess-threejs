@@ -37,14 +37,13 @@ export const PieceFactory = (function() {
    *  -1=char engraved inwards (there is precision & loading efficiency issues
    *  for this); 1=char protruding outwards; 0=flat char
    */
-  const ENGRAVE = -1;
+  const ENGRAVE = 1;
 
   /**
    * font options. Should only be integers 1 or 2
-   *  1=lishu, 2=xingkai, 3=yankai
-   * // TODO: 新魏体
+   *  1=lishu, 2=xingkai, 3=yankai, 4=wei
    */
-  const FONT_TYPE = 1;
+  const FONT_TYPE = 4;
 
   /**
    * texture options. Should only be integers
@@ -187,7 +186,7 @@ export const PieceFactory = (function() {
     const fontLoader = new FontLoader();
     // restricted char set: (within parenthesis are json file names)
     // 方正行楷(fz-xingkai)&方正刘炳森隶书(fz-lbs-lishu)：帥將王仕士侍相象像馬車炮兵卒勇岩
-    const FONTS = ['fz-lbs-lishu', 'fz-xingkai', 'ar-yankai'];
+    const FONTS = ['fz-lbs-lishu', 'fz-xingkai', 'ar-yankai', 'fz-wei'];
     let fontName = FONTS[FONT_TYPE - 1];
     try {
       let font = await fontLoader.loadAsync('/public/fonts/'+fontName+'.json'); // TODO: use regex
@@ -195,7 +194,7 @@ export const PieceFactory = (function() {
       const settings = {
         font:font,
         size: 16,
-        height:0,
+        height: 0,
         bevelEnabled: true,
         bevelThickness: (ENGRAVE === 0) ? 0 : 0.4,
         bevelSize: 0.4,

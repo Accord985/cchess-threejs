@@ -10,6 +10,7 @@
  *
  * // TODO: Documentation!!! Add the mark as I hover.
  * // TODO: add drag mode, clean the code again, combine method used once
+ * // TODO: change color of grid.
  */
 
 'use strict';
@@ -377,6 +378,7 @@ import {PieceFactory} from './piece.js';
     let hovered = getPieceInPos(position);
     clearHighlight();
     if (hovered) {
+      console.log(hovered);
       setHighlight(hovered, 0x996600);
     }
     renderer.render(scene, camera);
@@ -387,14 +389,13 @@ import {PieceFactory} from './piece.js';
     // engraved upwards/flat: has array of children with material
     let components = piece.children;
     for (let i = 0; i < components.length; i++) {
-      if (components[i].isBrush) { // true for Brush, undefined for Mesh
-        // Brushes' material is an Array of Material
-        let materials = components[i].material;
-        for (let j = 0; j < materials.length; j++) {
-          materials[j].emissive.setHex(color);
+      let material = components[i].material;
+      if (material.isMaterial) {
+        material.emissive.setHex(color);
+      } else {  // it might be an array
+        for (let j = 0; j < material.length; j++) {
+          material[j].emissive.setHex(color);
         }
-      } else {
-        components[i].material.emissive.setHex(color);
       }
     }
   }
