@@ -394,7 +394,7 @@ import {PieceFactory} from './piece.js';
    * sets up the lighting within the scene.
    */
   function setLighting() {
-    const environmentLight = new THREE.AmbientLight(0xffffff, 2);
+    const environmentLight = new THREE.AmbientLight(0xcccccc, 3);
     scene.add(environmentLight);
     const light = new THREE.DirectionalLight(0xffffff, 1.6);
     light.position.set(-17,13,40); // direction: from position to (0,0,0) [default]
