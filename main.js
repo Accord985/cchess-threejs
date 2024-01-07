@@ -185,7 +185,7 @@ import {PieceFactory} from './piece.js';
       let resp = await fetch('layouts.json');
       resp = await statusCheck(resp);
       resp = await resp.json();
-      await populateByLayout(resp["stable"]);
+      await populateByLayout(resp["9-piece-handicap"]);
     } catch (err) {
       console.error(err);
     }
