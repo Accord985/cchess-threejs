@@ -4,7 +4,7 @@
  *  displays an error message instead.
  *
  * wood picture retrieved from https://kampshardwoods.com/product/white-oak/ &
- *   https://kampshardwoods.com/product/walnut/
+ *   https://www.pinterest.com/pin/299841287663599961/
  * granite picture from https://en.wikipedia.org/wiki/File:Fj%C3%A6regranitt3.JPG
  * wooden background from https://unsplash.com/photos/brown-parquet-board-wG923J9naFQ?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash
  *
@@ -378,25 +378,15 @@ import {PieceFactory} from './piece.js';
     let hovered = getPieceInPos(position);
     clearHighlight();
     if (hovered) {
-      console.log(hovered);
-      setHighlight(hovered, 0x996600);
+      setHighlight(hovered, 0x444444);
     }
     renderer.render(scene, camera);
   }
 
   function setHighlight(piece, color) {
-    // deal with the mesh and brush differently
-    // engraved upwards/flat: has array of children with material
     let components = piece.children;
     for (let i = 0; i < components.length; i++) {
-      let material = components[i].material;
-      if (material.isMaterial) {
-        material.emissive.setHex(color);
-      } else {  // it might be an array
-        for (let j = 0; j < material.length; j++) {
-          material[j].emissive.setHex(color);
-        }
-      }
+      components[i].material.emissive.setHex(color);
     }
   }
 
@@ -404,10 +394,10 @@ import {PieceFactory} from './piece.js';
    * sets up the lighting within the scene.
    */
   function setLighting() {
-    const environmentLight = new THREE.AmbientLight(0xcccccc, 2);
+    const environmentLight = new THREE.AmbientLight(0xffffff, 2);
     scene.add(environmentLight);
-    const light = new THREE.DirectionalLight(0xffffff, 4);
-    light.position.set(-20,10,40); // direction: from position to (0,0,0) [default]
+    const light = new THREE.DirectionalLight(0xffffff, 1.6);
+    light.position.set(-17,13,40); // direction: from position to (0,0,0) [default]
     light.castShadow = true;
     light.shadow.camera.left = -25; // these allow the light to cast shadow for everything that's within the camera
     light.shadow.camera.right = 25;
@@ -415,8 +405,11 @@ import {PieceFactory} from './piece.js';
     light.shadow.camera.bottom = -30;
     light.shadow.mapSize.set(256,256);
     scene.add(light);
+    const reflectionLight = new THREE.DirectionalLight(0xffffff, 1); // this light creates the reflection on the pieces.
+    reflectionLight.position.set(-30,-50,30);
+    scene.add(reflectionLight);
 
-    // const helper = new THREE.CameraHelper(light.shadow.camera);
+    // const helper = new THREE.CameraHelper(reflectionLight.shadow.camera);
     // scene.add(helper);
   }
 })();

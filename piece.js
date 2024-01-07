@@ -11,16 +11,9 @@
 import * as THREE from 'three';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
-import {SUBTRACTION, Brush, Evaluator} from 'three-bvh-csg';
 
 export const PieceFactory = (function() {
   const SEGMENTS = 32; // take this number of segments when dealing with circles in the model
-  const TEAMS = [
-    new THREE.Color(0x666666), // grey/team0(stone)
-    new THREE.Color(0xcc3333), // red/team1
-    new THREE.Color(0x222222), // black/team2
-    new THREE.Color(0x35967b)  // green/team3
-  ];
   const CHARACTERS = {
     'K':'帥將王', // King
     'G':'仕士侍', // Guard
@@ -34,10 +27,9 @@ export const PieceFactory = (function() {
 
   /**
    * engraving options. Should only be integers -1, 0, or 1
-   *  -1=char engraved inwards (there is precision & loading efficiency issues
-   *  for this); 1=char protruding outwards; 0=flat char
+   *  -1=char engraved inwards; 1=char protruding outwards; 0=flat char
    */
-  const ENGRAVE = 1;
+  const ENGRAVE = -1;
 
   /**
    * font options. Should only be integers 1 or 2
@@ -47,9 +39,16 @@ export const PieceFactory = (function() {
 
   /**
    * texture options. Should only be integers
-   *  1=white oak, 2=black oak, other=UV grid
+   *  1=white oak, 2=dark oak, other=UV grid
    */
   const BASE_TYPE = 1;
+
+  const TEAMS = [
+    new THREE.Color(0x666666), // grey/team0(stone)
+    new THREE.Color(0xcc3333), // red/team1
+    (BASE_TYPE === 1) ? new THREE.Color(0x1a1a1a) : new THREE.Color(0x3366ff), // black(light bg) blue(dark bg)/team2
+    new THREE.Color(0x408000)  // green/team3
+  ];
 
   let team;
   let type;
@@ -71,9 +70,9 @@ export const PieceFactory = (function() {
 
   async function createPiece() {
     let side = createSide();
-    let surfaces = createSurfacesBrush();
-    let carve = createCarveBrush();
-    let text = await createTextBrush();
+    let surfaces = createSurfaces();
+    let carve = createCarve();
+    let text = await createText();
     let group = combineAsGroup(side,surfaces,carve,text);
     group.name = "piece-"+team+type;
     return group;
@@ -88,14 +87,8 @@ export const PieceFactory = (function() {
    * @returns THREE.Material - a new instance of the material
    */
   function generateMaterial(repeatX, repeatY, offsetX, offsetY) {
-    let fileName = 'uv_grid_opengl';
-    if (team === 0) {
-      fileName = 'granite';
-    } else if (BASE_TYPE === 1) {
-      fileName = 'whiteoak';
-    } else if (BASE_TYPE === 2) {
-      fileName = 'walnut';
-    }
+    let fileNames = ['granite','whiteoak','walnut','uv_grid_opengl'];
+    let fileName = fileNames[BASE_TYPE] || fileNames[fileNames.length-1];
     // const map = new THREE.TextureLoader().load('public/uv_grid_opengl.jpg'); // for debugging
     const map = new THREE.TextureLoader().load('public/'+fileName+'.jpg'); // TODO: use regex
     map.wrapS = map.wrapT = THREE.RepeatWrapping; // texture infinitely repeats in both directions
@@ -103,7 +96,7 @@ export const PieceFactory = (function() {
     map.colorSpace = THREE.SRGBColorSpace; // needed for colored models
     map.repeat.set(repeatX, repeatY);
     map.offset.set(offsetX, offsetY);
-    return new THREE.MeshPhongMaterial({map: map, side: THREE.FrontSide, shadowSide: THREE.DoubleSide, shininess:1000}); // wireframe:true
+    return new THREE.MeshPhongMaterial({map: map, side: THREE.FrontSide, shadowSide: THREE.DoubleSide, specular: 0x4d4d4d, shininess:100}); // wireframe:true
   }
 
   /**
@@ -130,20 +123,21 @@ export const PieceFactory = (function() {
    */
   function combineAsGroup(side,surfaces,carve, text) {
     let group = new THREE.Group();
-    group.add(side);
+    surfaces.castShadow = true;
+    side.castShadow = true;
 
-    if (ENGRAVE >= 0) {
-      surfaces.castShadow = true;
-      group.add(surfaces);
-      group.add(carve);
-      group.add(text);
-    } else {
-      const evaluator = new Evaluator();
-      let result = evaluator.evaluate(surfaces, carve, SUBTRACTION);
-      result = evaluator.evaluate(result, text, SUBTRACTION);
-      result.castShadow = true;
-      group.add(result);
-    }
+    /**
+     * add extra 0.01 so that in flat char case the objects don't conflict in space
+     * when engraving flat/up, show the front side of the text/carve & center it at the surface
+     * when engraving down, show the back side & put the whole thing above the surface
+     */
+    let centerZ = (ENGRAVE === -1) ? 8.41 : 8.01;
+    centerMeshAt(carve, 0, 0, centerZ);
+    centerMeshAt(text, 0, 0, centerZ);
+    group.add(side);
+    group.add(surfaces);
+    group.add(carve);
+    group.add(text);
     return group;
   }
 
@@ -151,12 +145,11 @@ export const PieceFactory = (function() {
    * creates the brush for the surfaces of the piece (cylinder).
    * @returns Brush - a cylinder with wooden shiny texture
    */
-  function createSurfacesBrush() {
+  function createSurfaces() {
     const surfaceMat = generateMaterial(0.25, 0.25, 0.75*Math.random(), 0.75*Math.random());
-    const surfaces = new Brush(new THREE.CylinderGeometry(15.5, 15.5, 16, SEGMENTS), surfaceMat);
+    const surfaces = new THREE.Mesh(new THREE.CylinderGeometry(15.5, 15.5, 16, SEGMENTS), surfaceMat);
     surfaces.rotation.y = 2 * Math.PI / SEGMENTS * Math.floor(SEGMENTS * Math.random());
     surfaces.rotation.x = Math.PI/2;
-    surfaces.updateMatrixWorld();
     return surfaces;
   }
 
@@ -164,25 +157,24 @@ export const PieceFactory = (function() {
    * creates the brush for the ring-like engrave on the piece.
    * @returns Brush - a ring with height and bevel, covered by somewhat rough texture
    */
-  function createCarveBrush() {
+  function createCarve() {
     const carveShape = new THREE.Shape();
     carveShape.absarc(0,0,14.5,0,2*Math.PI);
     const holePath = new THREE.Path();
     holePath.absarc(0,0,13.5,0,2*Math.PI);
     carveShape.holes.push(holePath);
     const carveGeo = new THREE.ExtrudeGeometry(carveShape,{depth:0,bevelEnabled:ENGRAVE !== 0,bevelThickness:0.4});
-    const carveMat = new THREE.MeshLambertMaterial({color: TEAMS[team]});
-    const carve = new Brush(carveGeo, carveMat);
-    carve.position.set(0,0,8.01); // add extra 0.01 so that in flat char case the objects don't conflict in space
-    carve.updateMatrixWorld();
+    let displaySide = (ENGRAVE === -1) ? THREE.BackSide : THREE.FrontSide;
+    const carveMat = new THREE.MeshLambertMaterial({color: TEAMS[team], side: displaySide});
+    const carve = new THREE.Mesh(carveGeo, carveMat);
     return carve;
   }
 
   /**
    * creates the brush for the character engrave on the piece.
-   * @returns Brush - a character with height and bevel, covered by somewhat rough texture
+   * @returns Mesh - a character with height and bevel, covered by somewhat rough texture
    */
-  async function createTextBrush() {
+  async function createText() {
     const fontLoader = new FontLoader();
     // restricted char set: (within parenthesis are json file names)
     // 方正行楷(fz-xingkai)&方正刘炳森隶书(fz-lbs-lishu)：帥將王仕士侍相象像馬車炮兵卒勇岩
@@ -198,13 +190,12 @@ export const PieceFactory = (function() {
         bevelEnabled: true,
         bevelThickness: (ENGRAVE === 0) ? 0 : 0.4,
         bevelSize: 0.4,
-        bevelOffset: (FONT_TYPE === 3) ? -0.4 : -0.2,
+        bevelOffset: (FONT_TYPE === 3) ? -0.4 : -0.2, // font 3 is too thick. No need to bold it more
         bevelSegments: 1
       };
       const geo = new TextGeometry(char, settings);
-      const text = new Brush(geo, new THREE.MeshLambertMaterial({color: TEAMS[team]}));
-      centerMeshAt(text, 0, 0, 8.01);
-      text.updateMatrixWorld();
+      let displaySide = (ENGRAVE === -1) ? THREE.BackSide : THREE.FrontSide;
+      const text = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: TEAMS[team], side: displaySide}));
       return text;
     } catch(err) {
       console.error(err);
