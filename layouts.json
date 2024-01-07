@@ -1,0 +1,28 @@
+{
+  "default":
+    [
+      [{"team": 1, "type": "R"},{"team": 1, "type": "N"},{"team": 1, "type": "E"},{"team": 1, "type": "G"},{"team": 1, "type": "K"},{"team": 1, "type": "G"},{"team": 1, "type": "E"},{"team": 1, "type": "N"},{"team": 1, "type": "R"}],
+      [null,null,null,null,null,null,null,null,null],
+      [null,{"team": 1, "type": "C"},null,null,null,null,null,{"team": 1, "type": "C"},null],
+      [{"team": 1, "type": "P"},null,{"team": 1, "type": "P"},null,{"team": 1, "type": "P"},null,{"team": 1, "type": "P"},null,{"team": 1, "type": "P"}],
+      [null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null],
+      [{"team": 2, "type": "P"},null,{"team": 2, "type": "P"},null,{"team": 2, "type": "P"},null,{"team": 2, "type": "P"},null,{"team": 2, "type": "P"}],
+      [null,{"team": 2, "type": "C"},null,null,null,null,null,{"team": 2, "type": "C"},null],
+      [null,null,null,null,null,null,null,null,null],
+      [{"team": 2, "type": "R"},{"team": 2, "type": "N"},{"team": 2, "type": "E"},{"team": 2, "type": "G"},{"team": 2, "type": "K"},{"team": 2, "type": "G"},{"team": 2, "type": "E"},{"team": 2, "type": "N"},{"team": 2, "type": "R"}]
+    ],
+  "stable":
+    [
+      [{"team": 1, "type": "R"},{"team": 1, "type": "N"},{"team": 1, "type": "E"},{"team": 1, "type": "G"},{"team": 1, "type": "K"},{"team": 1, "type": "G"},{"team": 1, "type": "E"},{"team": 1, "type": "N"},{"team": 1, "type": "R"}],
+      [null,null,null,null,null,null,null,null,null],
+      [null,{"team": 1, "type": "C"},null,null,null,null,null,{"team": 1, "type": "C"},null],
+      [{"team": 1, "type": "N"},null,{"team": 1, "type": "N"},null,{"team": 1, "type": "N"},null,{"team": 1, "type": "N"},null,{"team": 1, "type": "N"}],
+      [null,null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null,null],
+      [{"team": 2, "type": "N"},null,{"team": 2, "type": "N"},null,{"team": 2, "type": "N"},null,{"team": 2, "type": "N"},null,{"team": 2, "type": "N"}],
+      [null,{"team": 2, "type": "C"},null,null,null,null,null,{"team": 2, "type": "C"},null],
+      [null,null,null,null,null,null,null,null,null],
+      [{"team": 2, "type": "R"},{"team": 2, "type": "N"},{"team": 2, "type": "E"},{"team": 2, "type": "G"},{"team": 2, "type": "K"},{"team": 2, "type": "G"},{"team": 2, "type": "E"},{"team": 2, "type": "N"},{"team": 2, "type": "R"}]
+    ]
+}

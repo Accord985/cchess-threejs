@@ -2,16 +2,15 @@
     width="900" height="1000"
     xmlns="http://www.w3.org/2000/svg">
   <style>
+    rect, polyline, line {
+      stroke: white;
+    }
     rect, polyline {
-      stroke: black;
       fill: transparent;
     }
     polyline {
       line-join: miter;
       stroke-width: 3;
-    }
-    line {
-      stroke: black;
     }
     text {
       font-family: "fz-haiti-kai", fangsong;

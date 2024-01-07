@@ -10,7 +10,6 @@
  *
  * // TODO: Documentation!!! Add the mark as I hover.
  * // TODO: add drag mode, clean the code again, combine method used once
- * // TODO: change color of grid.
  */
 
 'use strict';
@@ -25,6 +24,7 @@ import {PieceFactory} from './piece.js';
 
   const FRUSTUM_SIZE = 60;
   const GRID_SIZE = 5;
+  const TEXT_COLOR = 0x932011;
   const scene = new THREE.Scene(); // the scene that holds all the objects
   const camera = new THREE.OrthographicCamera(-7,7,7,-7,0.1,100); // responsible for looking at the objects
   const renderer = new THREE.WebGLRenderer(); // renders the result on the page based on scene and camera
@@ -121,7 +121,7 @@ import {PieceFactory} from './piece.js';
 
   function createGrid(texture) {
     const geometry = new THREE.PlaneGeometry(45,50);
-    const pattern = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({map: texture, transparent:true}));
+    const pattern = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: TEXT_COLOR, map: texture, transparent:true}));
     pattern.position.z = 0.01; // 0.01 above the board so that there's no coord conflict issues
     return pattern;
   }
@@ -171,7 +171,7 @@ import {PieceFactory} from './piece.js';
    */
   function generateTextAt(content, setting, x, y) {
     const geometry = new TextGeometry(content, setting);
-    const material = new THREE.MeshLambertMaterial({color: 0x000000});
+    const material = new THREE.MeshLambertMaterial({color: TEXT_COLOR});
     const text = new THREE.Mesh(geometry,material);
     geometry.computeBoundingBox();
     const offsetX = x - 0.5 * (geometry.boundingBox.max.x + geometry.boundingBox.min.x);
@@ -181,25 +181,21 @@ import {PieceFactory} from './piece.js';
   }
 
   async function defaultLayout() {
-    const SCALE = 4.5/40;
-    const LAYOUT = [ // TODO: store it as json & fetch it
-      // PieceSetting[][]:  [(lane1)[file1, file2, ..., file9], (lane2), ..., (lane10)] <= lane1=closest lane to me
-      // PieceSetting: {team: int, type: char} for eampty space: undefined
-      [{team: 1, type: 'R'},{team: 1, type: 'N'},{team: 1, type: 'E'},{team: 1, type: 'G'},{team: 1, type: 'K'},{team: 1, type: 'G'},{team: 1, type: 'E'},{team: 1, type: 'N'},{team: 1, type: 'R'}],
-      [null,null,null,null,null,null,null,null,null],
-      [null,{team: 1, type: 'C'},null,null,null,null,null,{team: 1, type: 'C'},null],
-      [{team: 1, type: 'P'},null,{team: 1, type: 'P'},null,{team: 1, type: 'P'},null,{team: 1, type: 'P'},null,{team: 1, type: 'P'}],
-      [null,null,null,null,null,null,null,null,null],
-      [null,null,null,null,null,null,null,null,null],
-      [{team: 2, type: 'P'},null,{team: 2, type: 'P'},null,{team: 2, type: 'P'},null,{team: 2, type: 'P'},null,{team: 2, type: 'P'}],
-      [null,{team: 2, type: 'C'},null,null,null,null,null,{team: 2, type: 'C'},null],
-      [null,null,null,null,null,null,null,null,null],
-      [{team: 2, type: 'R'},{team: 2, type: 'N'},{team: 2, type: 'E'},{team: 2, type: 'G'},{team: 2, type: 'K'},{team: 2, type: 'G'},{team: 2, type: 'E'},{team: 2, type: 'N'},{team: 2, type: 'R'}]
-    ];
+    try {
+      let resp = await fetch('layouts.json');
+      resp = await statusCheck(resp);
+      resp = await resp.json();
+      await populateByLayout(resp["stable"]);
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
+  async function populateByLayout(layout) {
+    const SCALE = 4.5/40;
     for (let i = 0; i < 10; i++) {
       for (let j = 0; j < 9; j++) {
-        let setting = LAYOUT[i][j];
+        let setting = layout[i][j];
         if (setting) {
           PieceFactory.setProperty(setting.team, setting.type);
           const piece = await PieceFactory.createPiece();
@@ -405,11 +401,24 @@ import {PieceFactory} from './piece.js';
     light.shadow.camera.bottom = -30;
     light.shadow.mapSize.set(256,256);
     scene.add(light);
-    const reflectionLight = new THREE.DirectionalLight(0xffffff, 1); // this light creates the reflection on the pieces.
+    const reflectionLight = new THREE.DirectionalLight(0xffffff, 1); // this light creates the reflection on the pieces. casts no shadows
     reflectionLight.position.set(-30,-50,30);
     scene.add(reflectionLight);
 
     // const helper = new THREE.CameraHelper(reflectionLight.shadow.camera);
     // scene.add(helper);
+  }
+
+  /**
+   * checks the status of the response from the api. Throws an error if the status is not okay.
+   * @param {Object} res - the response from some api
+   * @returns {Object} - the same response from that api
+   * @throws {Error} the error message in the response
+   */
+  async function statusCheck(res) {
+    if (!res.ok) {
+      throw new Error(await res.text()); // res.text is not a function???
+    }
+    return res;
   }
 })();

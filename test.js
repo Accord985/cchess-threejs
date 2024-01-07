@@ -44,7 +44,6 @@ import {ADDITION, SUBTRACTION, Brush, Evaluator} from 'three-bvh-csg';
   }
 
   async function createText() {
-    // TODO: clip
     let fontLoader = new FontLoader();
     try {
       let font = await fontLoader.loadAsync('/public/fonts/fz-lbs-lishu.json');
