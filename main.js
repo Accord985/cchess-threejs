@@ -41,11 +41,12 @@ import {PieceFactory} from './piece.js';
       throw new Error('WebGL not supported');
     }
     document.getElementById('loading').classList.remove('hidden');
+    const textureLoader = new THREE.TextureLoader();
 
-    scene.background = new THREE.TextureLoader().load('/public/background.jpg');
+    scene.background = textureLoader.load('/public/background.jpg');
     setLighting();
 
-    const board = await createBoard();
+    const board = await createBoard(textureLoader);
     board.position.set(0,0,-0.9); // piece height: 1.8
     scene.add(board);
 
@@ -91,37 +92,39 @@ import {PieceFactory} from './piece.js';
     document.body.appendChild(message);
   }
 
-  async function createBoard() {
-    const textureLoader = new THREE.TextureLoader();
+  async function createBoard(textureLoader) {
     const group = new THREE.Group();
     group.name = "board";
 
-    const boardTexture = textureLoader.load('/public/whiteoak.jpg'); // TODO: get a new board texture
-    const board = createBoardBase(boardTexture);
+    const board = createBoardBase(textureLoader);
     group.add(board);
 
-    const gridTexture = textureLoader.load('/public/board.svg');
-    const grid = createGrid(gridTexture);
+    const grid = createGrid(textureLoader);
     group.add(grid);
+
+    // TODO: shadow plane and light plane
+    // const emissiveMap = textureLoader.load('/public/board-emission.svg');
 
     const text = await createText();
     group.add(text);
     return group;
   }
 
-  function createBoardBase(texture) {
+  function createBoardBase(textureLoader) {
+    const texture = textureLoader.load('/public/whiteoak.jpg'); // TODO: get a new board texture
     texture.colorSpace = THREE.SRGBColorSpace;
     const geometry = new THREE.BoxGeometry(48,54.4,4); // chessboard:45*50
-    const base = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffeecc,map:texture})); // the color is a filter
+    const base = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffffff,map:texture})); // the color is a filter
     base.position.set(0,0.2,-2); // move upward so that the up & bottom margin seem to be the same length
     base.receiveShadow = true;
     base.name = "board-base";
     return base;
   }
 
-  function createGrid(texture) {
+  function createGrid(textureLoader) {
+    const texture = textureLoader.load('/public/board.svg');
     const geometry = new THREE.PlaneGeometry(45,50);
-    const pattern = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: TEXT_COLOR, map: texture, transparent:true}));
+    const pattern = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: TEXT_COLOR, map: texture, transparent:true, emissiveMap:emissiveMap, emissive: 0xffffff}));
     pattern.position.z = 0.01; // 0.01 above the board so that there's no coord conflict issues
     return pattern;
   }
@@ -185,7 +188,7 @@ import {PieceFactory} from './piece.js';
       let resp = await fetch('layouts.json');
       resp = await statusCheck(resp);
       resp = await resp.json();
-      await populateByLayout(resp["9-piece-handicap"]);
+      await populateByLayout(resp["default"]);
     } catch (err) {
       console.error(err);
     }

@@ -1,0 +1,11 @@
+<svg version="1.1"
+    width="900" height="1000"
+    xmlns="http://www.w3.org/2000/svg">
+  <style>
+    rect {
+      fill: red;
+    }
+  </style>
+  <!-- outer bound: left-top: 300,300; bottom-right: 600,700 -->
+  <rect x="300" y="300" width="300" height="400" />
+</svg>

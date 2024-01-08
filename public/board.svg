@@ -23,7 +23,7 @@
     }
   </style>
   <!-- outer bound: left-top: 30,30; bottom-right: 870,970 -->
-  <rect x="30" y="30" width="840" height="940" stroke-width="15" fill="white" />
+  <rect x="30" y="30" width="840" height="940" stroke-width="15" />
   <!-- inner bound: left-top: 50,50; bottom-right: 850,950 -->
   <rect x="50" y="50" width="800" height="900" stroke-width="10" />
 
