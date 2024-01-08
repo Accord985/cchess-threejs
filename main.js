@@ -94,16 +94,13 @@ import {PieceFactory} from './piece.js';
 
   async function createBoard(textureLoader) {
     const group = new THREE.Group();
-    group.name = "board";
 
     const board = createBoardBase(textureLoader);
     group.add(board);
 
     const grid = createGrid(textureLoader);
+    grid.name = 'grid';
     group.add(grid);
-
-    // TODO: shadow plane and light plane
-    // const emissiveMap = textureLoader.load('/public/board-emission.svg');
 
     const text = await createText();
     group.add(text);
@@ -111,21 +108,38 @@ import {PieceFactory} from './piece.js';
   }
 
   function createBoardBase(textureLoader) {
+    const group = new THREE.Group();
+
     const texture = textureLoader.load('/public/whiteoak.jpg'); // TODO: get a new board texture
     texture.colorSpace = THREE.SRGBColorSpace;
     const geometry = new THREE.BoxGeometry(48,54.4,4); // chessboard:45*50
     const base = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffffff,map:texture})); // the color is a filter
     base.position.set(0,0.2,-2); // move upward so that the up & bottom margin seem to be the same length
-    base.receiveShadow = true;
     base.name = "board-base";
-    return base;
+    group.add(base);
+
+    const geometry2 = new THREE.PlaneGeometry(48, 54.4);
+    const material = new THREE.ShadowMaterial();
+    material.transparent = true;
+    material.opacity = 0.6;
+    const shadow = new THREE.Mesh(geometry2, material);
+    shadow.position.set(0, 0.2, 0.1);
+    shadow.receiveShadow = true;
+    group.add(shadow);
+
+    const geometry3 = new THREE.PlaneGeometry(45, 50);
+    const lightTexture = textureLoader.load('/public/board-emission.svg');
+    const light = new THREE.Mesh(geometry3, new THREE.MeshBasicMaterial({color: 0xffffff,map: lightTexture, transparent: true}))
+    light.position.z = 0.01;
+    group.add(light);
+    return group;
   }
 
   function createGrid(textureLoader) {
     const texture = textureLoader.load('/public/board.svg');
     const geometry = new THREE.PlaneGeometry(45,50);
-    const pattern = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: TEXT_COLOR, map: texture, transparent:true, emissiveMap:emissiveMap, emissive: 0xffffff}));
-    pattern.position.z = 0.01; // 0.01 above the board so that there's no coord conflict issues
+    const pattern = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: TEXT_COLOR, map: texture, transparent:true}));
+    pattern.position.z = 0.02; // 0.01 above the board so that there's no coord conflict issues
     return pattern;
   }
 
@@ -161,6 +175,7 @@ import {PieceFactory} from './piece.js';
     } catch(err) {
       console.error(err);
     }
+    textGroup.position.z = 0.02;
     return textGroup;
   }
 
@@ -179,7 +194,7 @@ import {PieceFactory} from './piece.js';
     geometry.computeBoundingBox();
     const offsetX = x - 0.5 * (geometry.boundingBox.max.x + geometry.boundingBox.min.x);
     const offsetY = y - 0.5 * (geometry.boundingBox.max.y + geometry.boundingBox.min.y);
-    text.position.set(offsetX, offsetY, 0.01);
+    text.position.set(offsetX, offsetY, 0);
     return text;
   }
 
@@ -301,7 +316,7 @@ import {PieceFactory} from './piece.js';
    */
   function findContactPos() {
     raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObject(scene.getObjectByName("board-base"));
+    const intersects = raycaster.intersectObject(scene.getObjectByName("grid"));
     if (intersects.length !== 0) {
       let intersect = intersects[0].point; // can't use object because it only sees the components
       return toBoardCoord({x: intersect.x, y: intersect.y});
@@ -372,6 +387,7 @@ import {PieceFactory} from './piece.js';
    */
   function animate() {
     requestAnimationFrame(animate);
+
 
     let position = findContactPos();
     let hovered = getPieceInPos(position);
