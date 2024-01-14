@@ -10,6 +10,7 @@
  *
  * // TODO: Documentation!!! Add the mark as I hover.
  * // TODO: add drag mode, clean the code again, combine method used once
+ * * error in layout.json is for server error
  */
 
 'use strict';
@@ -34,6 +35,7 @@ import {PieceFactory} from './piece.js';
   // initiate a 10*9 2D array. Can I do it more efficiently???
   let currentLayout = initiateCurrentLayout();
   let selectedId = null;
+  let highlightedId = null;
 
   async function init() {
     if (!WebGL.isWebGLAvailable()) {
@@ -50,8 +52,7 @@ import {PieceFactory} from './piece.js';
     board.position.set(0,0,-0.9); // piece height: 1.8
     scene.add(board);
 
-    await defaultLayout();
-    // await randomLayout(0.7);
+    await layoutByName("eror");
 
     camera.position.z = 50*Math.cos(Math.PI/9);
     camera.position.y = -50*Math.sin(Math.PI/9);
@@ -198,14 +199,19 @@ import {PieceFactory} from './piece.js';
     return text;
   }
 
-  async function defaultLayout() {
+  async function layoutByName(layoutName) {
     try {
       let resp = await fetch('layouts.json');
       resp = await statusCheck(resp);
       resp = await resp.json();
-      await populateByLayout(resp["default"]);
+      let layout = resp[layoutName];
+      if (!layout) {
+        throw new Error("unable to find layout: " + layoutName);
+      }
+      await populateByLayout(layout); // layout might not exist
     } catch (err) {
       console.error(err);
+      await randomLayout(0.3);
     }
   }
 
@@ -263,12 +269,31 @@ import {PieceFactory} from './piece.js';
    */
   function onWindowResize() {
     adaptCamera();
-    renderer.setSize(window.innerWidth, window.innerHeight); // re-render
+    renderer.setSize(window.innerWidth, window.innerHeight); // reset the settings for next frame
   }
 
   function onPointerMove(evt) {
     pointer.x = (evt.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(evt.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(pointer, camera);
+    
+
+    let boardPos = findContactPos();
+    let hovered = (boardPos) ? getPieceInPos(boardPos) : null;
+    let hoveredId = (hovered) ? hovered.id : null;
+    // no board pos: clear highlight; board pos but no piece there: clear highlight; board pos but different piece: switch highlight; board pos and same piece: do nothing
+    // if there is highlight and there is piece, highlight that piece and remove highlight for the one with highlighted id.
+    // then reset the id
+    if ((!boardPos || hoveredId !== highlightedId) && highlightedId) {
+      let previous = scene.getObjectById(highlightedId);
+      setHighlight(previous, 0x000000);
+      highlightedId = null;
+    }
+    if (boardPos && hoveredId !== highlightedId && hovered) {
+      setHighlight(hovered, 0x444444);
+      highlightedId = hovered.id;
+    }
   }
 
   // hovered y, selected y > capture (depending on team)
@@ -279,6 +304,7 @@ import {PieceFactory} from './piece.js';
     let pointerPos = findContactPos();
     let clicked = getPieceInPos(pointerPos);
     const selected = scene.getObjectById(selectedId);
+    let selectedPos
     if (selected) {
       // same: select clicked, put down; different: capture clicked, move, put down; no: move, put down
       unselectPiece(selected);
@@ -299,14 +325,18 @@ import {PieceFactory} from './piece.js';
     }
   }
 
-  function movePieceTo(piece, boardPos) {
-    if (boardPos) {
-      let piecePos = toBoardCoord({x:piece.position.x, y:piece.position.y});
-      let pointerWorld = toWorldCoord(boardPos);
-      piece.position.set(pointerWorld.x,pointerWorld.y,0);
-      currentLayout[piecePos.row][piecePos.column] = null;
-      currentLayout[boardPos.row][boardPos.column] = piece.id;
+  function movePieceTo(startPos, endPos) {
+    if (!startPos || !endPos) {
+      throw new Error('starting position/ending position is not defined');
     }
+    let piece = getPieceInPos(startPos);
+    if (!piece) {
+      throw new Error("no pieces to move");
+    }
+    let pointerWorld = toWorldCoord(endPos);
+    piece.position.set(pointerWorld.x,pointerWorld.y,0);
+    currentLayout[startPos.row][startPos.column] = null;
+    currentLayout[endPos.row][endPos.column] = piece.id;
   }
 
   /**
@@ -318,7 +348,7 @@ import {PieceFactory} from './piece.js';
     raycaster.setFromCamera(pointer, camera);
     const intersects = raycaster.intersectObject(scene.getObjectByName("grid"));
     if (intersects.length !== 0) {
-      let intersect = intersects[0].point; // can't use object because it only sees the components
+      let intersect = intersects[0].point;
       return toBoardCoord({x: intersect.x, y: intersect.y});
     }
     return null;
@@ -330,11 +360,12 @@ import {PieceFactory} from './piece.js';
    * @returns {group} - the piece that is hovered by the cursor
    */
   function getPieceInPos(boardPos) {
-    if (boardPos) {
-      let piece = scene.getObjectById(currentLayout[boardPos.row][boardPos.column]);
-      if (piece) {
-        return piece;
-      }
+    if (!boardPos) {
+      throw new Error("boardPos is not defined");
+    }
+    let piece = scene.getObjectById(currentLayout[boardPos.row][boardPos.column]);
+    if (piece) {
+      return piece;
     }
     return null;
   }
@@ -388,13 +419,6 @@ import {PieceFactory} from './piece.js';
   function animate() {
     requestAnimationFrame(animate);
 
-
-    let position = findContactPos();
-    let hovered = getPieceInPos(position);
-    clearHighlight();
-    if (hovered) {
-      setHighlight(hovered, 0x444444);
-    }
     renderer.render(scene, camera);
   }
 
