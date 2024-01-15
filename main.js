@@ -357,7 +357,6 @@ import Stats from 'three/addons/libs/stats.module.js';
       currentLayout[clickedPos.x][clickedPos.y] = selectedId;
       currentLayout[selectedPos.x][selectedPos.y] = null;
       myTeam = (myTeam === 1) ? 2 : 1; // TODO: abstract strategy???
-      console.log(currentLayout);
     }
     if (selectedId) {
       // P2: unselect currently selected piece
