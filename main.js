@@ -270,10 +270,10 @@ import Stats from 'three/addons/libs/stats.module.js';
     } else {
       height = FRUSTUM_WIDTH / aspect;
     }
-    camera.left = - FRUSTUM_SIZE * aspect / 2;
-    camera.right = FRUSTUM_SIZE * aspect / 2;
-    camera.top = FRUSTUM_SIZE / 2;
-    camera.bottom = - FRUSTUM_SIZE / 2;
+    camera.left = - height * aspect / 2;
+    camera.right = height * aspect / 2;
+    camera.top = height / 2;
+    camera.bottom = - height / 2;
     camera.updateProjectionMatrix(); // update the change into the camera
   }
 
