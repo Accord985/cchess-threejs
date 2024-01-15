@@ -50,30 +50,31 @@ import Stats from 'three/addons/libs/stats.module.js';
     const textureLoader = new THREE.TextureLoader();
 
     scene.background = textureLoader.load('/public/background.jpg');
-    // setLighting();
+    setLighting();
 
     const board = await createBoard(textureLoader);
     board.position.set(0,0,-0.9); // piece height: 1.8
-    // scene.add(board);
+    scene.add(board);
 
-    // await layoutByName("default");
+    await layoutByName("default");
 
     camera.position.z = 50*Math.cos(Math.PI/9);
     camera.position.y = -50*Math.sin(Math.PI/9);
     camera.lookAt(0,0,0);
     adaptCamera();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(3); // my devicePixelRatio is 1.5. 3 will be ultra HD
+    renderer.setPixelRatio(1.5); // my devicePixelRatio is 1.5. 3 will be ultra HD
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap; // create more natural shadow
     window.addEventListener('resize', onWindowResize);
 
     document.getElementById('loading').classList.add('hidden');
     document.body.appendChild(renderer.domElement);
-    // window.addEventListener('pointermove', onPointerMove);
-    // window.addEventListener('click', onClick);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('click', onClick);
 
     document.body.appendChild(stats.dom);
+    renderer.render(scene,camera);
     animate();
   }
 
@@ -318,6 +319,7 @@ import Stats from 'three/addons/libs/stats.module.js';
       }
       highlightedId = hoveredId;
     }
+    renderer.render(scene, camera);
   }
 
   function onClick() {
@@ -378,6 +380,8 @@ import Stats from 'three/addons/libs/stats.module.js';
       selectedPos = clickedPos;
       selectedId = currentLayout[selectedPos.x][selectedPos.y];
     }
+    console.log(renderer.info);
+    renderer.render(scene, camera);
   }
 
   // TODO: This should be a method for piece class.
@@ -396,7 +400,7 @@ import Stats from 'three/addons/libs/stats.module.js';
   function animate() {
     requestAnimationFrame(animate);
 
-    renderer.render(scene, camera);
+    // renderer.render(scene, camera);
     stats.update();
   }
 
