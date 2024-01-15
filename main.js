@@ -321,6 +321,9 @@ import Stats from 'three/addons/libs/stats.module.js';
   }
 
   function onClick() {
+    pointer.x = (evt.clientX / window.innerWidth) * 2 - 1;
+    pointer.y = -(evt.clientY / window.innerHeight) * 2 + 1;
+    
     raycaster.setFromCamera(pointer, camera);
     const intersects = raycaster.intersectObject(scene.getObjectByName("grid"));
     let clickedId = null;
