@@ -24,7 +24,8 @@ import Stats from 'three/addons/libs/stats.module.js';
 (function() {
   window.addEventListener('load', init);
 
-  const FRUSTUM_SIZE = 60;
+  const FRUSTUM_HEIGHT = 60;
+  const FRUSTUM_WIDTH = 50;
   const GRID_SIZE = 5;
   const TEXT_COLOR = 0x932011;
   const scene = new THREE.Scene(); // the scene that holds all the objects
@@ -263,6 +264,12 @@ import Stats from 'three/addons/libs/stats.module.js';
 
   function adaptCamera() {
     let aspect = window.innerWidth / window.innerHeight;
+    let height = -1;
+    if (aspect > 1.0*FRUSTUM_WIDTH/FRUSTUM_HEIGHT) {
+      height = FRUSTUM_HEIGHT;
+    } else {
+      height = FRUSTUM_WIDTH / aspect;
+    }
     camera.left = - FRUSTUM_SIZE * aspect / 2;
     camera.right = FRUSTUM_SIZE * aspect / 2;
     camera.top = FRUSTUM_SIZE / 2;
