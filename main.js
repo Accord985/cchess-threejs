@@ -50,13 +50,13 @@ import Stats from 'three/addons/libs/stats.module.js';
     const textureLoader = new THREE.TextureLoader();
 
     scene.background = textureLoader.load('/public/background.jpg');
-    // setLighting();
+    setLighting();
 
     const board = await createBoard(textureLoader);
     board.position.set(0,0,-0.9); // piece height: 1.8
-    // scene.add(board);
+    scene.add(board);
 
-    // await layoutByName("default");
+    await layoutByName("default");
 
     camera.position.z = 50*Math.cos(Math.PI/9);
     camera.position.y = -50*Math.sin(Math.PI/9);
@@ -70,8 +70,8 @@ import Stats from 'three/addons/libs/stats.module.js';
 
     document.getElementById('loading').classList.add('hidden');
     document.body.appendChild(renderer.domElement);
-    // window.addEventListener('pointermove', onPointerMove);
-    // window.addEventListener('click', onClick);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('click', onClick);
 
     document.body.appendChild(stats.dom);
     animate();
