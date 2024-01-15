@@ -19,6 +19,7 @@ import WebGL from 'three/addons/capabilities/WebGL.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import {PieceFactory} from './piece.js';
+import Stats from 'three/addons/libs/stats.module.js';
 
 (function() {
   window.addEventListener('load', init);
@@ -31,11 +32,14 @@ import {PieceFactory} from './piece.js';
   const renderer = new THREE.WebGLRenderer(); // renders the result on the page based on scene and camera
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
+  const stats = new Stats();
 
   // initiate a 10*9 2D array. Can I do it more efficiently???
   let currentLayout = initiateCurrentLayout();
+  let selectedPos = new THREE.Vector2(-1,-1);
   let selectedId = null;
   let highlightedId = null;
+  let myTeam = 1;
 
   async function init() {
     if (!WebGL.isWebGLAvailable()) {
@@ -46,13 +50,13 @@ import {PieceFactory} from './piece.js';
     const textureLoader = new THREE.TextureLoader();
 
     scene.background = textureLoader.load('/public/background.jpg');
-    setLighting();
+    // setLighting();
 
     const board = await createBoard(textureLoader);
     board.position.set(0,0,-0.9); // piece height: 1.8
-    scene.add(board);
+    // scene.add(board);
 
-    await layoutByName("eror");
+    // await layoutByName("default");
 
     camera.position.z = 50*Math.cos(Math.PI/9);
     camera.position.y = -50*Math.sin(Math.PI/9);
@@ -66,8 +70,10 @@ import {PieceFactory} from './piece.js';
 
     document.getElementById('loading').classList.add('hidden');
     document.body.appendChild(renderer.domElement);
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('click', onClick);
+    // window.addEventListener('pointermove', onPointerMove);
+    // window.addEventListener('click', onClick);
+
+    document.body.appendChild(stats.dom);
     animate();
   }
 
@@ -129,7 +135,7 @@ import {PieceFactory} from './piece.js';
     group.add(shadow);
 
     const geometry3 = new THREE.PlaneGeometry(45, 50);
-    const lightTexture = textureLoader.load('/public/board-emission.svg');
+    const lightTexture = textureLoader.load('/public/board-lighting.svg');
     const light = new THREE.Mesh(geometry3, new THREE.MeshBasicMaterial({color: 0xffffff,map: lightTexture, transparent: true}))
     light.position.z = 0.01;
     group.add(light);
@@ -272,145 +278,116 @@ import {PieceFactory} from './piece.js';
     renderer.setSize(window.innerWidth, window.innerHeight); // reset the settings for next frame
   }
 
+  // highlight: 0x444444
+  // moved out: position.x = 40
+  // scene.getObjectById(id)
+  // coords: board(c,r) world(x,y)
+  //    x = 5 * c - 20, y: 5 * r - 22.5
+  //    c = floor((x+22.5)/5), r = floor((y+25)/5)
+  // TODO: make setHighlight a method for pieces
+  //    for all material m in that piece: m.emissive.setHex(color);
+
   function onPointerMove(evt) {
     pointer.x = (evt.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(evt.clientY / window.innerHeight) * 2 + 1;
 
     raycaster.setFromCamera(pointer, camera);
-    
-
-    let boardPos = findContactPos();
-    let hovered = (boardPos) ? getPieceInPos(boardPos) : null;
-    let hoveredId = (hovered) ? hovered.id : null;
-    // no board pos: clear highlight; board pos but no piece there: clear highlight; board pos but different piece: switch highlight; board pos and same piece: do nothing
-    // if there is highlight and there is piece, highlight that piece and remove highlight for the one with highlighted id.
-    // then reset the id
-    if ((!boardPos || hoveredId !== highlightedId) && highlightedId) {
-      let previous = scene.getObjectById(highlightedId);
-      setHighlight(previous, 0x000000);
+    const intersects = raycaster.intersectObject(scene.getObjectByName("grid"));
+    let hoveredId = null;
+    if (intersects.length !== 0) {
+      let contactPos = intersects[0].point;
+      let boardCol = Math.floor((contactPos.x + 22.5) / 5);
+      let boardRow = Math.floor((contactPos.y + 25) / 5);
+      hoveredId = currentLayout[boardRow][boardCol];
+    }
+    if (!(intersects.length !== 0 && hoveredId && hoveredId === highlightedId) && highlightedId) {
+      // remove highlight of current highlighted piece
+      let highlightedPiece = scene.getObjectById(highlightedId);
+      let components = highlightedPiece.children;
+      for (let i = 0; i < components.length; i++) {
+        components[i].material.emissive.setHex(0x000000);
+      }
       highlightedId = null;
     }
-    if (boardPos && hoveredId !== highlightedId && hovered) {
-      setHighlight(hovered, 0x444444);
-      highlightedId = hovered.id;
+    if (intersects.length !== 0 && hoveredId && !(highlightedId && hoveredId === highlightedId)) {
+      //  add highlight to hovered piece
+      let hoveredPiece = scene.getObjectById(hoveredId);
+      let components = hoveredPiece.children;
+      for (let i = 0; i < components.length; i++) {
+        components[i].material.emissive.setHex(0x444444);
+      }
+      highlightedId = hoveredId;
     }
   }
 
-  // hovered y, selected y > capture (depending on team)
-  // hovered y, selected n > pick up
-  // hovered n, selected y > move
-  // hovered n, selected n > nothing
   function onClick() {
-    let pointerPos = findContactPos();
-    let clicked = getPieceInPos(pointerPos);
-    const selected = scene.getObjectById(selectedId);
-    let selectedPos
-    if (selected) {
-      // same: select clicked, put down; different: capture clicked, move, put down; no: move, put down
-      unselectPiece(selected);
-      if (clicked) {
-        if (checkPieceTeam(clicked) !== checkPieceTeam(selected) && checkPieceTeam(clicked) !== 0 && checkPieceTeam(selected) !== 0) {
-          clicked.position.x = 40;
-          movePieceTo(selected, pointerPos);
-        } else {
-          selectPiece(clicked);
-        }
-      } else {
-        movePieceTo(selected, pointerPos);
-      }
-    } else {
-      if (clicked) {
-        selectPiece(clicked);
-      }
-    }
-  }
-
-  function movePieceTo(startPos, endPos) {
-    if (!startPos || !endPos) {
-      throw new Error('starting position/ending position is not defined');
-    }
-    let piece = getPieceInPos(startPos);
-    if (!piece) {
-      throw new Error("no pieces to move");
-    }
-    let pointerWorld = toWorldCoord(endPos);
-    piece.position.set(pointerWorld.x,pointerWorld.y,0);
-    currentLayout[startPos.row][startPos.column] = null;
-    currentLayout[endPos.row][endPos.column] = piece.id;
-  }
-
-  /**
-   *
-   * @returns {object} an object with x & y attributes as the x & y coordinate on the board. (0,0) represents
-   *  the bottom-left corner.
-   */
-  function findContactPos() {
     raycaster.setFromCamera(pointer, camera);
     const intersects = raycaster.intersectObject(scene.getObjectByName("grid"));
+    let clickedId = null;
+    let currentSelectedId = selectedId; // ensure that the value doesn't change after updates on selectedId
+    let currentTeam = myTeam;
+    let clickedPos = null;
+    let contactPos = null;
+    let clickedPiece = null;
     if (intersects.length !== 0) {
-      let intersect = intersects[0].point;
-      return toBoardCoord({x: intersect.x, y: intersect.y});
+      contactPos = intersects[0].point;
+      let boardCol = Math.floor((contactPos.x + 22.5) / 5);
+      let boardRow = Math.floor((contactPos.y + 25) / 5);
+      clickedPos = new THREE.Vector2(boardRow, boardCol);
+      clickedId = currentLayout[clickedPos.x][clickedPos.y];
+      clickedPiece = scene.getObjectById(clickedId);
     }
-    return null;
-  }
 
-  /**
-   * finds out which piece is currently selected.
-   * use the board position!!
-   * @returns {group} - the piece that is hovered by the cursor
-   */
-  function getPieceInPos(boardPos) {
-    if (!boardPos) {
-      throw new Error("boardPos is not defined");
+    // A = intersects.length !== 0
+    // B = clickedId
+    // C = selectedId
+    // D = dumbGetTeam(scene.getObjById(clickedId)) === myTeam
+    // E = rule(scene.getObjById(clickedId), currentLayout)
+    // F = clickedId === currentSelectedId
+    if (intersects.length !== 0 && clickedId && dumbGetTeam(clickedPiece) !== myTeam && selectedId && rule(clickedPiece, currentLayout)) {
+      // P4: move clicked piece out of the board
+      clickedPiece.position.x = 40;
+      currentLayout[clickedPos.x][clickedPos.y] = null;
     }
-    let piece = scene.getObjectById(currentLayout[boardPos.row][boardPos.column]);
-    if (piece) {
-      return piece;
+    if (intersects.length !== 0 && selectedId && rule(clickedPiece, currentLayout) && !(clickedId && dumbGetTeam(clickedPiece) === myTeam)) {
+      // P3: move the selected piece to clicked position
+      let selectedPiece = scene.getObjectById(selectedId);
+      selectedPiece.position.x = 5 * Math.floor(contactPos.x / 5 + 0.5);
+      selectedPiece.position.y = 5 * Math.floor(contactPos.y / 5) + 2.5;
+      currentLayout[clickedPos.x][clickedPos.y] = selectedId;
+      currentLayout[selectedPos.x][selectedPos.y] = null;
+      myTeam = (myTeam === 1) ? 2 : 1; // TODO: abstract strategy???
+      console.log(currentLayout);
     }
-    return null;
-  }
-
-  function clearHighlight() {
-    for (let i = 0; i < 10; i++) {
-      for (let j = 0; j < 9; j++) {
-        let piece = getPieceInPos({column:j,row:i});
-        if (piece) {
-          setHighlight(piece, 0x000000);  // black highlight=no effect
-        }
-      }
+    if (selectedId) {
+      // P2: unselect currently selected piece
+      let selectedPiece = scene.getObjectById(selectedId);
+      selectedPiece.rotation.x = 0;
+      selectedPiece.position.z = 0;
+      let scale = 4.5 / 40;
+      selectedPiece.scale.set(scale,scale,scale);
+      selectedId = null;
+      selectedPos.set(-1,-1);
+    }
+    if (intersects.length !== 0 && clickedId && dumbGetTeam(clickedPiece) === currentTeam && !(currentSelectedId && clickedId === currentSelectedId)) {
+      // P5: select the clicked piece
+      clickedPiece.rotation.x = - THREE.MathUtils.degToRad(20);
+      clickedPiece.position.z = 2.4;
+      let scale = 4.9 / 40;
+      clickedPiece.scale.set(scale,scale,scale);
+      selectedPos = clickedPos;
+      selectedId = currentLayout[selectedPos.x][selectedPos.y];
     }
   }
 
-  function selectPiece(piece) {
-    piece.rotation.x = - THREE.MathUtils.degToRad(20);
-    piece.position.z = 2.4;
-    let scale = 4.9 / 40;
-    piece.scale.set(scale,scale,scale);
-    selectedId = piece.id;
+  // TODO: This should be a method for piece class.
+  function dumbGetTeam(piece) {
+    return piece ? parseInt(piece.name.charAt(6)) : null;
   }
 
-  function unselectPiece(piece) {
-    piece.rotation.x = 0;
-    piece.position.z = 0;
-    let scale = 4.5 / 40;
-    piece.scale.set(scale,scale,scale);
-    selectedId = null;
-  }
-
-  function checkPieceTeam(piece) {
-    return parseInt(piece.name.charAt(6));
-  }
-
-  function toWorldCoord(boardPos) {
-    return {x: 5 * boardPos.column - 20, y: 5 * boardPos.row - 22.5};
-  }
-
-  function toBoardCoord(position) {
-    let result = {column: Math.floor((position.x + 22.5) / 5), row: Math.floor((position.y + 25) / 5)};
-    if (result.column >= 0 && result.column < 9 && result.row >= 0 && result.row < 10) {
-      return result;
-    }
-    return null;
+  // TODO: This should be a method for piece class
+  function rule(piece, board) {
+    return true;
   }
 
   /**
@@ -420,13 +397,7 @@ import {PieceFactory} from './piece.js';
     requestAnimationFrame(animate);
 
     renderer.render(scene, camera);
-  }
-
-  function setHighlight(piece, color) {
-    let components = piece.children;
-    for (let i = 0; i < components.length; i++) {
-      components[i].material.emissive.setHex(color);
-    }
+    stats.update();
   }
 
   /**
@@ -460,7 +431,7 @@ import {PieceFactory} from './piece.js';
    */
   async function statusCheck(res) {
     if (!res.ok) {
-      throw new Error(await res.text()); // res.text is not a function???
+      throw new Error(await res.text());
     }
     return res;
   }
