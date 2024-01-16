@@ -70,9 +70,10 @@ import Stats from 'three/addons/libs/stats.module.js';
     window.addEventListener('resize', onWindowResize);
 
     document.getElementById('loading').classList.add('hidden');
-    document.body.appendChild(renderer.domElement);
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('click', onClick);
+    let gameView = renderer.domElement;
+    document.body.appendChild(gameView);
+    gameView.addEventListener('pointermove', onPointerMove);
+    gameView.addEventListener('mouseup', onClick); // I cannot use click as it is not supported on safari
 
     document.body.appendChild(stats.dom);
     animate();
