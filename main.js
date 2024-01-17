@@ -14,6 +14,7 @@
  */
 
 'use strict';
+
 import * as THREE from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
