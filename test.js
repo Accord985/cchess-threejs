@@ -4,7 +4,7 @@ import WebGL from 'three/addons/capabilities/WebGL.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 // import {ADDITION, SUBTRACTION, Brush, Evaluator} from 'three-bvh-csg';
-// PieceFactory.setProperty(1,'帥');
+// PieceFactory.setProperty(1,'帥') ;
 
 (function() {
   window.addEventListener('load', init);
