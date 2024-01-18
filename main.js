@@ -57,14 +57,14 @@ import Stats from 'three/addons/libs/stats.module.js';
     board.position.set(0,0,-0.9); // piece height: 1.8
     scene.add(board);
 
-    await layoutByName("default");
+    await layoutByName("error");
 
     camera.position.z = 50*Math.cos(Math.PI/9);
     camera.position.y = -50*Math.sin(Math.PI/9);
     camera.lookAt(0,0,0);
     adaptCamera();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(1.5); // my devicePixelRatio is 1.5. 3 will be ultra HD
+    renderer.setPixelRatio(3); // my devicePixelRatio is 1.5. 3 will be ultra HD
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap; // create more natural shadow
     window.addEventListener('resize', onWindowResize);

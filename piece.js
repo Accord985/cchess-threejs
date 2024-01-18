@@ -33,9 +33,9 @@ export const PieceFactory = (function() {
 
   /**
    * font options. Should only be integers 1 or 2
-   *  1=lishu, 2=xingkai, 3=yankai, 4=wei
+   *  1=western, 2=lishu, 3=xingkai, 4=yankai, 5=wei
    */
-  const FONT_TYPE = 4;
+  const FONT_TYPE = 1;
 
   /**
    * texture options. Should only be integers
@@ -178,11 +178,12 @@ export const PieceFactory = (function() {
     const fontLoader = new FontLoader();
     // restricted char set: (within parenthesis are json file names)
     // 方正行楷(fz-xingkai)&方正刘炳森隶书(fz-lbs-lishu)：帥將王仕士侍相象像馬車炮兵卒勇岩
-    const FONTS = ['fz-lbs-lishu', 'fz-xingkai', 'ar-yankai', 'fz-wei'];
+    // western: 仅有 帥仕相馬車炮兵
+    const FONTS = ['western', 'fz-lbs-lishu', 'fz-xingkai', 'ar-yankai', 'fz-wei'];
     let fontName = FONTS[FONT_TYPE - 1];
     try {
       let font = await fontLoader.loadAsync('/public/fonts/'+fontName+'.json'); // TODO: use regex
-      let char = CHARACTERS[type].charAt(team-1) || CHARACTERS[type].charAt(0); // 'a' || 's' => 'a'; 's'.charAt(2) => ''; '' || 's' => 's'
+      let char = (FONT_TYPE===1) ? CHARACTERS[type].charAt(0) : CHARACTERS[type].charAt(team-1) || CHARACTERS[type].charAt(0); // 'a' || 's' => 'a'; 's'.charAt(2) => ''; '' || 's' => 's'
       const settings = {
         font:font,
         size: 16,
@@ -190,7 +191,7 @@ export const PieceFactory = (function() {
         bevelEnabled: true,
         bevelThickness: (ENGRAVE === 0) ? 0 : 0.4,
         bevelSize: 0.4,
-        bevelOffset: (FONT_TYPE === 3) ? -0.4 : -0.2, // font 3 is too thick. No need to bold it more
+        bevelOffset: (FONT_TYPE === 4 || FONT_TYPE === 1) ? -0.4 : -0.2, // font 3 is too thick. No need to bold it more
         bevelSegments: 1
       };
       const geo = new TextGeometry(char, settings);

@@ -63,7 +63,7 @@
     [null,null,null,null,null,null,null,null,null],
     [null,null,null,null,{"team": 1, "type": "K"},null,null,null,null],
     [null,null,null,null,null,null,null,null,null],
-    [null,null,null,null,{"team": 1, "type": "P"},null,null,null,null],
+    [null,{"team": 0, "type": "S"},null,null,{"team": 1, "type": "P"},null,null,null,null],
     [null,null,null,null,{"team": 1, "type": "C"},{"team": 1, "type": "R"},null,null,null],
     [null,null,null,null,null,null,{"team": 2, "type": "E"},null,null],
     [null,null,{"team": 2, "type": "P"},null,null,null,{"team": 2, "type": "P"},null,null],
