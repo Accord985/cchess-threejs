@@ -11,6 +11,7 @@
  * // TODO: Documentation!!! Add the mark as I hover.
  * // TODO: add drag mode, clean the code again, combine method used once
  * * error in layout.json is for server error
+ *
  */
 
 'use strict';
@@ -65,7 +66,7 @@ import Stats from 'three/addons/libs/stats.module.js';
     camera.lookAt(0,0,0);
     adaptCamera();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(3); // my devicePixelRatio is 1.5. 3 will be ultra HD
+    renderer.setPixelRatio(1.5); // my devicePixelRatio is 1.5. 3 will be ultra HD
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap; // create more natural shadow
     window.addEventListener('resize', onWindowResize);
@@ -77,6 +78,7 @@ import Stats from 'three/addons/libs/stats.module.js';
     gameView.addEventListener('mouseup', onClick); // I cannot use click as it is not supported on safari
 
     document.body.appendChild(stats.dom);
+    renderer.render(scene,camera);
     animate();
   }
 
@@ -327,6 +329,7 @@ import Stats from 'three/addons/libs/stats.module.js';
       }
       highlightedId = hoveredId;
     }
+    renderer.render(scene, camera);
   }
 
   function onClick(evt) {
@@ -389,6 +392,8 @@ import Stats from 'three/addons/libs/stats.module.js';
       selectedPos = clickedPos;
       selectedId = currentLayout[selectedPos.x][selectedPos.y];
     }
+    console.log(renderer.info);
+    renderer.render(scene, camera);
   }
 
   // TODO: This should be a method for piece class.
@@ -407,7 +412,7 @@ import Stats from 'three/addons/libs/stats.module.js';
   function animate() {
     requestAnimationFrame(animate);
 
-    renderer.render(scene, camera);
+    // renderer.render(scene, camera);
     stats.update();
   }
 
