@@ -46,8 +46,8 @@ import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
   async function createText() {
     let fontLoader = new FontLoader();
     try {
-      let font = await fontLoader.loadAsync('/public/fonts/western.json');
-      const geo = new TextGeometry('車馬炮仕相帥兵岩', {font:font, size: 5, height:0, bevelEnabled:true, bevelThickness:0.4, bevelSize:0.4, bevelOffset:-0.4,bevelSegments:1});
+      let font = await fontLoader.loadAsync('/public/fonts/fz-lbs-lishu.json');
+      const geo = new TextGeometry('馬', {font:font, size: 5, height:0, bevelEnabled:true, bevelThickness:0.4, bevelSize:0.4, bevelOffset:-0.4,bevelSegments:1});
       geo.computeBoundingBox(); // compute the bounding box and center the character at (0,0)
       const offsetX = -0.5*(geo.boundingBox.max.x+geo.boundingBox.min.x);
       const offsetY = -0.5*(geo.boundingBox.max.y+geo.boundingBox.min.y);
