@@ -15,6 +15,7 @@
  */
 
 'use strict';
+
 import * as THREE from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
@@ -25,7 +26,8 @@ import Stats from 'three/addons/libs/stats.module.js';
 (function() {
   window.addEventListener('load', init);
 
-  const FRUSTUM_SIZE = 60;
+  const FRUSTUM_HEIGHT = 60;
+  const FRUSTUM_WIDTH = 50;
   const GRID_SIZE = 5;
   const TEXT_COLOR = 0x932011;
   const scene = new THREE.Scene(); // the scene that holds all the objects
@@ -70,9 +72,10 @@ import Stats from 'three/addons/libs/stats.module.js';
     window.addEventListener('resize', onWindowResize);
 
     document.getElementById('loading').classList.add('hidden');
-    document.body.appendChild(renderer.domElement);
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('click', onClick);
+    let gameView = renderer.domElement;
+    document.body.appendChild(gameView);
+    gameView.addEventListener('pointermove', onPointerMove);
+    gameView.addEventListener('mouseup', onClick); // I cannot use click as it is not supported on safari
 
     document.body.appendChild(stats.dom);
     renderer.render(scene,camera);
@@ -265,10 +268,16 @@ import Stats from 'three/addons/libs/stats.module.js';
 
   function adaptCamera() {
     let aspect = window.innerWidth / window.innerHeight;
-    camera.left = - FRUSTUM_SIZE * aspect / 2;
-    camera.right = FRUSTUM_SIZE * aspect / 2;
-    camera.top = FRUSTUM_SIZE / 2;
-    camera.bottom = - FRUSTUM_SIZE / 2;
+    let height = -1;
+    if (aspect > 1.0*FRUSTUM_WIDTH/FRUSTUM_HEIGHT) {
+      height = FRUSTUM_HEIGHT;
+    } else {
+      height = FRUSTUM_WIDTH / aspect;
+    }
+    camera.left = - height * aspect / 2;
+    camera.right = height * aspect / 2;
+    camera.top = height / 2;
+    camera.bottom = - height / 2;
     camera.updateProjectionMatrix(); // update the change into the camera
   }
 
@@ -321,7 +330,10 @@ import Stats from 'three/addons/libs/stats.module.js';
     renderer.render(scene, camera);
   }
 
-  function onClick() {
+  function onClick(evt) {
+    pointer.x = (evt.clientX / window.innerWidth) * 2 - 1;
+    pointer.y = -(evt.clientY / window.innerHeight) * 2 + 1;
+
     raycaster.setFromCamera(pointer, camera);
     const intersects = raycaster.intersectObject(scene.getObjectByName("grid"));
     let clickedId = null;
@@ -358,7 +370,6 @@ import Stats from 'three/addons/libs/stats.module.js';
       currentLayout[clickedPos.x][clickedPos.y] = selectedId;
       currentLayout[selectedPos.x][selectedPos.y] = null;
       myTeam = (myTeam === 1) ? 2 : 1; // TODO: abstract strategy???
-      console.log(currentLayout);
     }
     if (selectedId) {
       // P2: unselect currently selected piece
