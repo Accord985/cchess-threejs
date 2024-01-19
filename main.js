@@ -59,7 +59,7 @@ import Stats from 'three/addons/libs/stats.module.js';
     board.position.set(0,0,-0.9); // piece height: 1.8
     scene.add(board);
 
-    await layoutByName("default");
+    await layoutByName("debug");
 
     camera.position.z = 50*Math.cos(Math.PI/9);
     camera.position.y = -50*Math.sin(Math.PI/9);
