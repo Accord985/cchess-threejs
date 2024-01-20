@@ -3,10 +3,11 @@
  * This file draws a Chinese chess piece in animation. If WebGL is not supported,
  *  displays an error message instead.
  *
+ * // TODO: move credits to README
  * wood picture retrieved from https://kampshardwoods.com/product/white-oak/ &
  *   https://www.pinterest.com/pin/299841287663599961/
  * granite picture from https://en.wikipedia.org/wiki/File:Fj%C3%A6regranitt3.JPG
- * wooden background from https://unsplash.com/photos/brown-parquet-board-wG923J9naFQ?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash
+ * wooden background from https://unsplash.com/photos/brown-parquet-board-wG923J9naFQ
  *
  * // TODO: Documentation!!!
  * // TODO: add drag mode
@@ -37,7 +38,6 @@ import Stats from 'three/addons/libs/stats.module.js';
   const pointer = new THREE.Vector2();
   const stats = new Stats();
 
-  // initiate a 10*9 2D array. Can I do it more efficiently???
   let currentLayout = initiateCurrentLayout();
   let selectedPos = new THREE.Vector2(-1,-1);
   let selectedId = null;
@@ -61,10 +61,11 @@ import Stats from 'three/addons/libs/stats.module.js';
 
     await layoutByName("debug");
 
-    camera.position.z = 50*Math.cos(Math.PI/9);
-    camera.position.y = -50*Math.sin(Math.PI/9);
+    camera.position.z = 50 * Math.cos(Math.PI / 9);
+    camera.position.y = -50 * Math.sin(Math.PI / 9);
     camera.lookAt(0,0,0);
     adaptCamera();
+
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(3); // my devicePixelRatio is 1.5. 3 will be ultra HD
     renderer.shadowMap.enabled = true;
@@ -75,7 +76,7 @@ import Stats from 'three/addons/libs/stats.module.js';
     let gameView = renderer.domElement;
     document.body.appendChild(gameView);
     gameView.addEventListener('pointermove', onPointerMove);
-    gameView.addEventListener('mouseup', onClick); // I cannot use click as it is not supported on safari
+    gameView.addEventListener('mouseup', onClick); // cannot use click as it is not supported on safari
 
     document.body.appendChild(stats.dom);
     renderer.render(scene,camera);
@@ -405,17 +406,17 @@ import Stats from 'three/addons/libs/stats.module.js';
   }
 
   /**
-   * modify the piece for the next frame and renders. This allows the animation of the piece.
+   * runs the animation loop. Regularly updates the stats module every frame.
    */
   function animate() {
     requestAnimationFrame(animate);
 
-    // renderer.render(scene, camera);
+    // doesn't update the renderer as the scene won't animate without user input [TO BE CHANGED]
     stats.update();
   }
 
   /**
-   * sets up the lighting within the scene.
+   * sets up the lights within the scene.
    */
   function setLighting() {
     const environmentLight = new THREE.AmbientLight(0xcccccc, 3);
@@ -423,13 +424,15 @@ import Stats from 'three/addons/libs/stats.module.js';
     const light = new THREE.DirectionalLight(0xffffff, 1.6);
     light.position.set(-17,13,40); // direction: from position to (0,0,0) [default]
     light.castShadow = true;
-    light.shadow.camera.left = -25; // these allow the light to cast shadow for everything that's within the camera
+    light.shadow.camera.left = -25; // enlarge the shadow casting area of the light
     light.shadow.camera.right = 25;
     light.shadow.camera.top = 30;
     light.shadow.camera.bottom = -30;
     light.shadow.mapSize.set(256,256);
     scene.add(light);
-    const reflectionLight = new THREE.DirectionalLight(0xffffff, 1); // this light creates the reflection on the pieces. casts no shadows
+
+    // this light creates a reflection on the pieces. casts no shadows
+    const reflectionLight = new THREE.DirectionalLight(0xffffff, 1);
     reflectionLight.position.set(-30,-50,30);
     scene.add(reflectionLight);
 
