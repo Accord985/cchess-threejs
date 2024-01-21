@@ -406,8 +406,10 @@ import Stats from 'three/addons/libs/stats.module.js';
    *  * D= true if the already selected piece and the clicked piece are in the same team
    *  * E= true if the attempted move is allowed by the rule [NOT IMPLEMENTED]
    *  * F= true if the already selected piece is the same as the clicked piece
-   *  * P1= remove the highlight effect from the already highlighted piece
-   *  * P2= add highlight effect to the hovered piece
+   *  * P1= de-select the already selected piece
+   *  * P2= move the already selected piece to the clicked position
+   *  * P3= move the clicked piece out of the board
+   *  * P4= select the clicked piece
    * @param {Event} evt - the mousedown event that called this method
    */
   function onClick(evt) {
