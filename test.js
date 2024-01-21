@@ -1,3 +1,8 @@
+/**
+ * BW 2024.1.20
+ * This file is solely for debugging. It is not related with the application.
+ */
+
 'use strict';
 import * as THREE from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';

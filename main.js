@@ -329,7 +329,24 @@ import Stats from 'three/addons/libs/stats.module.js';
   }
 
   /**
-   *
+   * Based on the pointer location and the current board, decides the appropriate piece to highlight.
+   *  This is the decision tree:
+   *                            A?
+   *                   ┎────Y───┸───N────┒
+   *                   B?                C?
+   *            ┎───Y──┸──N──┒       ┎─Y─┸─N─┒
+   *            C            C       P1      /
+   *        ┎─Y─┸─N─┒    ┎─Y─┸─N─┒
+   *        D       P2   P1      /
+   *    ┎─Y─┸─N─┒
+   *    /     P1+P2
+   *  Therefore the condition for P1 = !(A&B&D)&C; P2 = A&B&!(C&D), where
+   *  * A= true if there is a contact point on the grid
+   *  * B= true if there is a piece at the contact point from A (or there is a hovered piece)
+   *  * C= true if there is already a highlighted piece
+   *  * D= true if the already highlighted piece is the same as the hovered piece
+   *  * P1= remove the highlight effect from the already highlighted piece
+   *  * P2= add highlight effect to the hovered piece
    * @param {Event} evt - the pointermove event that called this method
    */
   function onPointerMove(evt) {
@@ -367,7 +384,30 @@ import Stats from 'three/addons/libs/stats.module.js';
   }
 
   /**
-   *
+   * Based on the pointer location and the current board, decides the appropriate operation from
+   *  the 4 possible ones: selecting/unselecting a piece, moving a piece around/out of the board.
+   *  This is the decision tree:
+   *                                               A?
+   *                                 ┎───────Y─────┸─────N──────┒
+   *                                 B?                         C?
+   *                     ┎──────Y────┸─────N─────┒          ┎─Y─┸─N─┒
+   *                     D                       C          P1      /
+   *            ┎────Y───┸───N───┒           ┎─Y─┸─N─┒
+   *            C                C           E       /
+   *        ┎─Y─┸─N─┒        ┎─Y─┸─N─┒   ┎─Y─┸─N─┒
+   *        F       P4       E       /   P2+P1   P1
+   *    ┎─Y─┸─N─┒        ┎─Y─┸─N─┒
+   *    P1    P1+P4   P3+P2+P1   P1
+   *  Therefore the condition for P1 = C; P2 = A&C&E&!(B&D), P3= A&B&(!D)&C&E,
+   *    P4= A&B&D&!(C&F), where
+   *  * A= true if there is a contact point on the grid
+   *  * B= true if there is a piece at the contact point from A (or there is a clicked piece)
+   *  * C= true if there is already a selected piece
+   *  * D= true if the already selected piece and the clicked piece are in the same team
+   *  * E= true if the attempted move is allowed by the rule [NOT IMPLEMENTED]
+   *  * F= true if the already selected piece is the same as the clicked piece
+   *  * P1= remove the highlight effect from the already highlighted piece
+   *  * P2= add highlight effect to the hovered piece
    * @param {Event} evt - the mousedown event that called this method
    */
   function onClick(evt) {
