@@ -1,7 +1,7 @@
 /**
  * BW 2023.11.13
- * This file draws a Chinese chess piece in animation. If WebGL is not supported,
- *  displays an error message instead.
+ * This file is the cchess game. You can move the pieces around in turn without rules.
+ *  If WebGL is not supported, displays an error message instead.
  *
  * // TODO: move credits to README
  * wood picture retrieved from https://kampshardwoods.com/product/white-oak/ &
@@ -27,16 +27,17 @@ import Stats from 'three/addons/libs/stats.module.js';
 (function() {
   window.addEventListener('load', init);
 
-  const FRUSTUM_HEIGHT = 60;
-  const FRUSTUM_WIDTH = 50;
-  const GRID_SIZE = 5;
-  const TEXT_COLOR = 0x932011;
+  const FRUSTUM_HEIGHT = 60; // minimum height of the camera
+  const FRUSTUM_WIDTH = 50; // minimum width of the camera
+  const GRID_SIZE = 5; // the size of one square in the chessboard
+  const TEXT_COLOR = 0x932011; // the color of the text and the chessboard
+
   const scene = new THREE.Scene(); // the scene that holds all the objects
   const camera = new THREE.OrthographicCamera(-7,7,7,-7,0.1,100); // responsible for looking at the objects
   const renderer = new THREE.WebGLRenderer(); // renders the result on the page based on scene and camera
-  const raycaster = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
-  const stats = new Stats();
+  const raycaster = new THREE.Raycaster(); // object for raycasting (picking the contact point of cursor & object)
+  const pointer = new THREE.Vector2(); // the position of the pointer on the screen
+  const stats = new Stats(); // the stats modules for FPS, lag, and memory usage
 
   let currentLayout = initiateCurrentLayout();
   let selectedPos = new THREE.Vector2(-1,-1);
@@ -59,7 +60,7 @@ import Stats from 'three/addons/libs/stats.module.js';
     board.position.set(0,0,-0.9); // piece height: 1.8
     scene.add(board);
 
-    await layoutByName("debug");
+    await layoutByName("default");
 
     camera.position.z = 50 * Math.cos(Math.PI / 9);
     camera.position.y = -50 * Math.sin(Math.PI / 9);
@@ -83,6 +84,10 @@ import Stats from 'three/addons/libs/stats.module.js';
     animate();
   }
 
+  /**
+   * initiates an empty 10 by 9 2D array for recording current layout.
+   * @returns array - the empty layout array
+   */
   function initiateCurrentLayout() {
     let result = new Array(10);
     for (let i = 0; i < 10; i++) {
@@ -105,6 +110,11 @@ import Stats from 'three/addons/libs/stats.module.js';
     document.body.appendChild(message);
   }
 
+  /**
+   * creates the board as three.js objects.
+   * @param {THREE.TextureLoader} textureLoader - the object for loading images as textures
+   * @returns {THREE.Group} - the board to be used in three.js scene
+   */
   async function createBoard(textureLoader) {
     const group = new THREE.Group();
 
@@ -120,14 +130,20 @@ import Stats from 'three/addons/libs/stats.module.js';
     return group;
   }
 
+  /**
+   * creates the base of the board, with the lighting effect in the middle
+   *  and the shadow-receiving plane.
+   * @param {THREE.TextureLoader} textureLoader - the object for loading images as textures
+   * @returns {THREE.Group} - the board to be used in three.js scene
+   */
   function createBoardBase(textureLoader) {
     const group = new THREE.Group();
 
-    const texture = textureLoader.load('/public/whiteoak.jpg'); // TODO: get a new board texture
+    const texture = textureLoader.load('/public/whiteoak.jpg');
     texture.colorSpace = THREE.SRGBColorSpace;
-    const geometry = new THREE.BoxGeometry(48,54.4,4); // chessboard:45*50
+    const geometry = new THREE.BoxGeometry(48,54.4,4); // TODO in README: chessboard:45*50 centered, add 1.5/2 in edges, and add 0.4 at far side
     const base = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffffff,map:texture})); // the color is a filter
-    base.position.set(0,0.2,-2); // move upward so that the up & bottom margin seem to be the same length
+    base.position.set(0,0.2,-2);
     base.name = "board-base";
     group.add(base);
 
@@ -148,17 +164,22 @@ import Stats from 'three/addons/libs/stats.module.js';
     return group;
   }
 
+  /**
+   * creates the grid of the board.
+   * @param {THREE.TextureLoader} textureLoader - the object for loading images as textures
+   * @returns {THREE.Mesh} - the grid of the board
+   */
   function createGrid(textureLoader) {
     const texture = textureLoader.load('/public/board.svg');
     const geometry = new THREE.PlaneGeometry(45,50);
     const pattern = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: TEXT_COLOR, map: texture, transparent:true}));
-    pattern.position.z = 0.02; // 0.01 above the board so that there's no coord conflict issues
+    pattern.position.z = 0.02; // 0.01 away from surrounding objects so that there's no coord conflict issues. From down to up: board-base, highlight, grid, shadow
     return pattern;
   }
 
   /**
    * creates all the texts on the board.
-   * @returns
+   * @returns {THREE.Group} - all the text on the board
    */
   async function createText() {
     const textGroup = new THREE.Group();
@@ -194,11 +215,11 @@ import Stats from 'three/addons/libs/stats.module.js';
 
   /**
    * creates a mesh with given text, format and position attributes.
-   * @param {} content
-   * @param {*} setting
-   * @param {*} x
-   * @param {*} y
-   * @returns
+   * @param {string} content - the content of the text. Could be anything
+   * @param {object} setting - the setting of the TextGeometry.
+   * @param {float} x - the x coordinate of the center of the text
+   * @param {float} y - the y coordinate of the center of the text
+   * @returns {THREE.Mesh} the text object with given content, setting, and center
    */
   function generateTextAt(content, setting, x, y) {
     const geometry = new TextGeometry(content, setting);
@@ -211,6 +232,11 @@ import Stats from 'three/addons/libs/stats.module.js';
     return text;
   }
 
+  /**
+   * requests the layout pattern from the server and populates the board with it.
+   *  If the layout is not found then the board will be randomly populated.
+   * @param {string} layoutName - the name of the layout.
+   */
   async function layoutByName(layoutName) {
     try {
       let resp = await fetch('layouts.json');
@@ -227,6 +253,13 @@ import Stats from 'three/addons/libs/stats.module.js';
     }
   }
 
+  /**
+   * given the layout pattern, populates the whole board.
+   * @param {arr[object]} layout - the layout pattern. Starts from the red team side and records
+   *   the pieces from left to right. If there is no piece the value is null. If there is a piece
+   *   the value will an object with "team" and "type" attributes, where team has to be a number
+   *   from 1-3 and type has to be a char from the set "KGERNCPS".
+   */
   async function populateByLayout(layout) {
     const SCALE = 4.5/40;
     for (let i = 0; i < 10; i++) {
@@ -245,8 +278,8 @@ import Stats from 'three/addons/libs/stats.module.js';
   }
 
   /**
-   * cover the whole board with random pieces.
-   * @param {float} density - the probability of a piece covering any position. Should be 0.0-1.0
+   * cover the whole board with random pieces. Stones won't be generated.
+   * @param {float} density - the probability of adding a piece at any position. Should be 0.0-1.0
    */
   async function randomLayout(density) {
     const SCALE = 4.5/40;
@@ -267,10 +300,14 @@ import Stats from 'three/addons/libs/stats.module.js';
     }
   }
 
+  /**
+   * changes the camera frustum size based on current window size. It ensures that
+   *  neither width or height gets smaller than their set minimum value.
+   */
   function adaptCamera() {
     let aspect = window.innerWidth / window.innerHeight;
     let height = -1;
-    if (aspect > 1.0*FRUSTUM_WIDTH/FRUSTUM_HEIGHT) {
+    if (aspect > 1.0 * FRUSTUM_WIDTH / FRUSTUM_HEIGHT) {
       height = FRUSTUM_HEIGHT;
     } else {
       height = FRUSTUM_WIDTH / aspect;
@@ -283,20 +320,18 @@ import Stats from 'three/addons/libs/stats.module.js';
   }
 
   /**
-   * Adapts the renderer and the camera to the window size.
+   * Adapts the renderer and the camera to the window size, and render again.
    */
   function onWindowResize() {
     adaptCamera();
-    renderer.setSize(window.innerWidth, window.innerHeight); // reset the settings for next frame
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.render(scene, camera);
   }
 
-  // highlight: 0x444444
-  // moved out: position.x = 40
-  // scene.getObjectById(id)
-  // coords: board(c,r) world(x,y)
-  //    x = 5 * c - 20, y: 5 * r - 22.5
-  //    c = floor((x+22.5)/5), r = floor((y+25)/5)
-
+  /**
+   *
+   * @param {Event} evt - the pointermove event that called this method
+   */
   function onPointerMove(evt) {
     pointer.x = (evt.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(evt.clientY / window.innerHeight) * 2 + 1;
@@ -331,6 +366,10 @@ import Stats from 'three/addons/libs/stats.module.js';
     renderer.render(scene, camera);
   }
 
+  /**
+   *
+   * @param {Event} evt - the mousedown event that called this method
+   */
   function onClick(evt) {
     pointer.x = (evt.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(evt.clientY / window.innerHeight) * 2 + 1;
@@ -352,12 +391,6 @@ import Stats from 'three/addons/libs/stats.module.js';
       clickedPiece = scene.getObjectById(clickedId);
     }
 
-    // A = intersects.length !== 0
-    // B = clickedId
-    // C = selectedId
-    // D = dumbGetTeam(scene.getObjById(clickedId)) === myTeam
-    // E = rule(scene.getObjById(clickedId), currentLayout)
-    // F = clickedId === currentSelectedId
     if (intersects.length !== 0 && clickedId && dumbGetTeam(clickedPiece) !== myTeam && selectedId && rule(clickedPiece, currentLayout)) {
       // P4: move clicked piece out of the board
       clickedPiece.position.x = 40;
@@ -391,7 +424,6 @@ import Stats from 'three/addons/libs/stats.module.js';
       selectedPos = clickedPos;
       selectedId = currentLayout[selectedPos.x][selectedPos.y];
     }
-    console.log(renderer.info);
     renderer.render(scene, camera);
   }
 
