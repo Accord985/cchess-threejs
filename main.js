@@ -387,15 +387,15 @@ import Stats from 'three/addons/libs/stats.module.js';
    * Based on the pointer location and the current board, decides the appropriate operation from
    *  the 4 possible ones: selecting/unselecting a piece, moving a piece around/out of the board.
    *  This is the decision tree:
-   *                                               A?
-   *                                 ┎───────Y─────┸─────N──────┒
-   *                                 B?                         C?
-   *                     ┎──────Y────┸─────N─────┒          ┎─Y─┸─N─┒
-   *                     D                       C          P1      /
-   *            ┎────Y───┸───N───┒           ┎─Y─┸─N─┒
-   *            C                C           E       /
-   *        ┎─Y─┸─N─┒        ┎─Y─┸─N─┒   ┎─Y─┸─N─┒
-   *        F       P4       E       /   P2+P1   P1
+   *                                                A?
+   *                                  ┎───────Y─────┸─────N──────┒
+   *                                  B?                         C?
+   *                     ┎──────Y─────┸──────N─────┒         ┎─Y─┸─N─┒
+   *                     D                         C          P1      /
+   *            ┎────Y───┸───N───┒             ┎─Y─┸─N─┒
+   *            C                C             E       /
+   *        ┎─Y─┸─N─┒        ┎─Y─┸─N─┒     ┎─Y─┸─N─┒
+   *        F       P4       E       /   P2+P1     P1
    *    ┎─Y─┸─N─┒        ┎─Y─┸─N─┒
    *    P1    P1+P4   P3+P2+P1   P1
    *  Therefore the condition for P1 = C; P2 = A&C&E&!(B&D), P3= A&B&(!D)&C&E,
