@@ -16,9 +16,9 @@ import * as THREE from 'three';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 
-export const PieceFactory = (function() {
-  const SEGMENTS = 32; // take this number of segments when dealing with circles in the model
-  const CHARACTERS = {
+export class Piece {
+  static #SEGMENTS = 32; // take this number of segments when dealing with circles in the model
+  static #CHARACTERS = {
     'K':'帥將王', // King
     'G':'仕士侍', // Guard
     'E':'相象像', // Elephant
@@ -33,58 +33,106 @@ export const PieceFactory = (function() {
    * engraving options. Should only be integers -1, 0, or 1
    *  -1=char engraved inwards; 1=char protruding outwards; 0=flat char
    */
-  const ENGRAVE = -1;
+  static #ENGRAVE = -1;
 
   /**
    * font options. Should only be integers 1 or 2
    *  1=western, 2=lishu, 3=xingkai, 4=yankai, 5=wei
    * * when using lishu, there is a bug that a hole is missing in 馬. This is a problem in TextGeometry.
    */
-  const FONT_TYPE = 1;
+  static #FONT_TYPE = 1;
 
   /**
    * texture options. Should only be integers
    *  1=white oak, 2=dark oak, other=UV grid
    */
-  const BASE_TYPE = 1;
+  static #BASE_TYPE = 1;
 
-  const TEAMS = [
+  static #TEAMS = [
     new THREE.Color(0x666666), // grey/team0(stone)
     new THREE.Color(0xcc3333), // red/team1
-    (BASE_TYPE === 1) ? new THREE.Color(0x1a1a1a) : new THREE.Color(0x3366ff), // black(light bg) blue(dark bg)/team2
+    (Piece.#BASE_TYPE === 1) ? new THREE.Color(0x1a1a1a) : new THREE.Color(0x3366ff), // black(light bg) blue(dark bg)/team2
     new THREE.Color(0x408000)  // green/team3
   ];
 
-  let team;
-  let type;
+  static #HIGHLIGHT = 0x444444;
+
+  #team;
+  #type;
+  #piece;
 
   /**
    * Initializes the piece given its piece and type.
-   *  Pieces with type S will have granite texture and team 0 regardless of given _type value
+   *  Pieces with type S will have granite texture and team 0 regardless of given type value
    *  Pieces without type S cannot be in team 0.
-   * @param {int} _team
-   * @param {char} _type
+   * @param {int} team
+   * @param {char} type
    */
-  function setProperty(_team, _type) {
-    team = (_team === 0) ? 1 : _team;
-    type = _type;
-    if (_type === 'S') {
-      team = 0;
+  constructor(team, type) {
+    this.#team = (team === 0) ? 1 : team;
+    this.#type = type;
+    if (type === 'S') {
+      this.#team = 0;
+    }
+  }
+
+  addHighlight() {
+    this.#setHighlight(Piece.#HIGHLIGHT);
+  }
+
+  removeHighlight() {
+    this.#setHighlight(0x000000);
+  }
+
+  getTeam() {
+    return this.#team;
+  }
+
+  getType() {
+    return this.#type;
+  }
+
+  moveOut() {
+    this.#piece.position = 40;
+  }
+
+  moveTo(x, y) {
+    this.#piece.position.x = x;
+    this.#piece.position.y = y;
+  }
+
+  unselect() {
+    this.#piece.rotation.x = 0;
+    this.#piece.position.z = 0;
+    this.#piece.scale.multiplyScalar(1/1.1);
+  }
+
+  select() {
+    this.#piece.rotation.x = - THREE.MathUtils.degToRad(20);
+    this.#piece.position.z = 2.4;
+    this.#piece.scale.multiplyScalar(1.1);
+  }
+
+  #setHighlight(color) {
+    let components = this.#piece.children;
+    for (let i = 0; i < components.length; i++) {
+      components[i].material.emissive.setHex(color);
     }
   }
 
   /**
    * creates the piece as three.js objects.
-   * @returns THREE.Group - the piece to be used in three.js scene
+   * return {THREE.Group} - the piece object to be used in three.js scene
    */
-  async function createPiece() {
-    let side = createSide();
-    let surfaces = createSurfaces();
-    let carve = createCarve();
-    let text = await createText();
-    let group = combineAsGroup(side,surfaces,carve,text);
-    group.name = "piece-"+team+type;
-    return group;
+  async createPiece() {
+    let side = this.#createSide();
+    let surfaces = this.#createSurfaces();
+    let carve = this.#createCarve();
+    let text = await this.#createText();
+    let group = this.#combineAsGroup(side,surfaces,carve,text);
+    group.name = `piece-${this.#team}${this.#type}`; // TODO: remove this one day
+    this.#piece = group;
+    return this.#piece;
   }
 
   /**
@@ -95,9 +143,9 @@ export const PieceFactory = (function() {
    * @param {float} offsetY - the offset of the texture in y direction. defined by number of repetition of the texture
    * @returns THREE.Material - a new instance of the material for the piece
    */
-  function generateMaterial(repeatX, repeatY, offsetX, offsetY) {
+  #generateMaterial(repeatX, repeatY, offsetX, offsetY) {
     let fileNames = ['whiteoak','walnut','uv_grid_opengl'];
-    let fileName = (type === 'S') ? 'granite' : fileNames[BASE_TYPE-1] || fileNames[fileNames.length-1];
+    let fileName = (this.#type === 'S') ? 'granite' : fileNames[Piece.#BASE_TYPE-1] || fileNames[fileNames.length-1];
     const map = new THREE.TextureLoader().load(`public/${fileName}.jpg`);
     map.wrapS = map.wrapT = THREE.RepeatWrapping; // texture infinitely repeats in both directions
     map.anisotropy = 32; // responsible for fidelity
@@ -111,14 +159,14 @@ export const PieceFactory = (function() {
    * creates the side of the piece.
    * @returns THREE.Mesh - the side of the piece
    */
-  function createSide() {
+  #createSide() {
     const sideArc = new THREE.Path();
     sideArc.absellipse(15.5, 0, 4.5, 8, -Math.PI/2, Math.PI/2);
     const points = sideArc.getSpacedPoints(10); // 10 point samples on the arc, evenly spaced
 
     // select random region in the original picture to generate the material
-    const sideMat = generateMaterial(1, 0.14, 0, 0.83 * Math.random());
-    const side = new THREE.Mesh(new THREE.LatheGeometry(points, SEGMENTS), sideMat);
+    const sideMat = this.#generateMaterial(1, 0.14, 0, 0.83 * Math.random());
+    const side = new THREE.Mesh(new THREE.LatheGeometry(points, Piece.#SEGMENTS), sideMat);
     side.rotation.x = Math.PI/2;
     side.rotation.y = Math.PI;
     side.castShadow = true;
@@ -129,7 +177,7 @@ export const PieceFactory = (function() {
    * creates the piece by combining the components: surfaces, carve, text, and side.
    * @returns Group - the piece as the combined result
    */
-  function combineAsGroup(side,surfaces,carve, text) {
+  #combineAsGroup(side,surfaces,carve, text) {
     let group = new THREE.Group();
     surfaces.castShadow = true;
     side.castShadow = true;
@@ -139,9 +187,9 @@ export const PieceFactory = (function() {
      * when ENGRAVE=0/1, show the front side of the text/carve & center it at the surface
      * when ENGRAVE=-1, show the back side & put the whole thing above the surface
      */
-    let centerZ = (ENGRAVE === -1) ? 8.41 : 8.01;
-    centerMeshAt(carve, 0, 0, centerZ);
-    centerMeshAt(text, 0, 0, centerZ);
+    let centerZ = (Piece.#ENGRAVE === -1) ? 8.41 : 8.01;
+    this.#centerMeshAt(carve, 0, 0, centerZ);
+    this.#centerMeshAt(text, 0, 0, centerZ);
     group.add(side);
     group.add(surfaces);
     group.add(carve);
@@ -153,10 +201,10 @@ export const PieceFactory = (function() {
    * creates the up & down surfaces of the piece.
    * @returns THREE.Mesh - the surfaces of the piece
    */
-  function createSurfaces() {
-    const surfaceMat = generateMaterial(0.25, 0.25, 0.75*Math.random(), 0.75*Math.random());
-    const surfaces = new THREE.Mesh(new THREE.CylinderGeometry(15.5, 15.5, 16, SEGMENTS), surfaceMat);
-    surfaces.rotation.y = 2 * Math.PI / SEGMENTS * Math.floor(SEGMENTS * Math.random());
+  #createSurfaces() {
+    const surfaceMat = this.#generateMaterial(0.25, 0.25, 0.75*Math.random(), 0.75*Math.random());
+    const surfaces = new THREE.Mesh(new THREE.CylinderGeometry(15.5, 15.5, 16, Piece.#SEGMENTS), surfaceMat);
+    surfaces.rotation.y = 2 * Math.PI / Piece.#SEGMENTS * Math.floor(Piece.#SEGMENTS * Math.random());
     surfaces.rotation.x = Math.PI/2;
     return surfaces;
   }
@@ -165,15 +213,15 @@ export const PieceFactory = (function() {
    * creates the ring-like engrave around the piece with a rough texture.
    * @returns THREE.Mesh - the ring mark on the piece
    */
-  function createCarve() {
+  #createCarve() {
     const carveShape = new THREE.Shape();
     carveShape.absarc(0,0,14.5,0,2*Math.PI);
     const holePath = new THREE.Path();
     holePath.absarc(0,0,13.5,0,2*Math.PI);
     carveShape.holes.push(holePath);
-    const carveGeo = new THREE.ExtrudeGeometry(carveShape,{depth:0,bevelEnabled:ENGRAVE !== 0,bevelThickness:0.4});
-    let displaySide = (ENGRAVE === -1) ? THREE.BackSide : THREE.FrontSide;
-    const carveMat = new THREE.MeshLambertMaterial({color: TEAMS[team], side: displaySide});
+    const carveGeo = new THREE.ExtrudeGeometry(carveShape,{depth:0,bevelEnabled:Piece.#ENGRAVE !== 0,bevelThickness:0.4});
+    let displaySide = (Piece.#ENGRAVE === -1) ? THREE.BackSide : THREE.FrontSide;
+    const carveMat = new THREE.MeshLambertMaterial({color: Piece.#TEAMS[this.#team], side: displaySide});
     const carve = new THREE.Mesh(carveGeo, carveMat);
     return carve;
   }
@@ -182,7 +230,7 @@ export const PieceFactory = (function() {
    * creates the character carving on the piece with a somewhat rough texture.
    * @returns THREE.Mesh - the character
    */
-  async function createText() {
+  async #createText() {
     const fontLoader = new FontLoader();
 
     /** // TODO: move it to README
@@ -196,27 +244,27 @@ export const PieceFactory = (function() {
      */
     // TODO: add manager for this class to deal with settings.
     const FONTS = ['western', 'fz-lbs-lishu', 'fz-xingkai', 'ar-yankai', 'fz-wei'];
-    let fontName = FONTS[FONT_TYPE - 1];
+    let fontName = FONTS[Piece.#FONT_TYPE - 1];
     try {
       let font = await fontLoader.loadAsync(`/public/fonts/${fontName}.json`);
-      let char = (FONT_TYPE===1) ? CHARACTERS[type].charAt(0) : CHARACTERS[type].charAt(team-1) || CHARACTERS[type].charAt(0); // 'a' || 's' => 'a'; 's'.charAt(2) => ''; '' || 's' => 's'
+      let char = (Piece.#FONT_TYPE===1) ? Piece.#CHARACTERS[this.#type].charAt(0) : Piece.#CHARACTERS[this.#type].charAt(this.#team-1) || Piece.#CHARACTERS[this.#type].charAt(0); // 'a' || 's' => 'a'; 's'.charAt(2) => ''; '' || 's' => 's'
       const settings = {
         font:font,
         size: 16,
         height: 0,
         bevelEnabled: true,
-        bevelThickness: (ENGRAVE === 0) ? 0 : 0.4,
+        bevelThickness: (Piece.#ENGRAVE === 0) ? 0 : 0.4,
         bevelSize: 0.4,
-        bevelOffset: (FONT_TYPE === 4 || FONT_TYPE === 1) ? -0.4 : -0.2, // font 3 is too thick. No need to bold it more
+        bevelOffset: (Piece.#FONT_TYPE === 4 || Piece.#FONT_TYPE === 1) ? -0.4 : -0.2, // font 3 is too thick. No need to bold it more
         bevelSegments: 1
       };
       const geo = new TextGeometry(char, settings);
-      let displaySide = (ENGRAVE === -1) ? THREE.BackSide : THREE.FrontSide;
-      const text = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: TEAMS[team], side: displaySide}));
+      let displaySide = (Piece.#ENGRAVE === -1) ? THREE.BackSide : THREE.FrontSide;
+      const text = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: Piece.#TEAMS[this.#team], side: displaySide}));
       return text;
     } catch(err) {
       console.error(err);
-      return new Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color:0xffff00}));
+      return new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color:0xffff00}));
     }
   }
 
@@ -227,7 +275,7 @@ export const PieceFactory = (function() {
    * @param {float} y - y coordinate of the center
    * @param {float} z - z coordinate of the center
    */
-  function centerMeshAt(mesh, x, y, z) {
+  #centerMeshAt(mesh, x, y, z) {
     const geometry = mesh.geometry;
     geometry.computeBoundingBox(); // compute the bounding box to update its value
     const offsetX = x - 0.5 * (geometry.boundingBox.max.x + geometry.boundingBox.min.x);
@@ -235,9 +283,4 @@ export const PieceFactory = (function() {
     const offsetZ = z - 0.5 * (geometry.boundingBox.max.z + geometry.boundingBox.min.z);
     mesh.position.set(offsetX, offsetY, offsetZ);
   }
-
-  return {
-    setProperty: setProperty,
-    createPiece: createPiece,
-  };
-})();
+}

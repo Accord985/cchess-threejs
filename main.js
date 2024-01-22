@@ -21,7 +21,7 @@ import * as THREE from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
-import {PieceFactory} from './piece.js';
+import {Piece} from './piece.js';
 import Stats from 'three/addons/libs/stats.module.js';
 
 (function() {
@@ -41,8 +41,8 @@ import Stats from 'three/addons/libs/stats.module.js';
 
   let currentLayout = initiateCurrentLayout();
   let selectedPos = new THREE.Vector2(-1,-1);
-  let selectedId = null;
-  let highlightedId = null;
+  let selected = null;
+  let highlighted = null;
   let myTeam = 1;
 
   async function init() {
@@ -266,12 +266,12 @@ import Stats from 'three/addons/libs/stats.module.js';
       for (let j = 0; j < 9; j++) {
         let setting = layout[i][j];
         if (setting) {
-          PieceFactory.setProperty(setting.team, setting.type);
-          const piece = await PieceFactory.createPiece();
-          piece.scale.set(SCALE,SCALE,SCALE);
-          piece.position.set(5*j-20,5*i-22.5,0);
-          currentLayout[i][j] = piece.id;
-          scene.add(piece);
+          let piece = new Piece(setting.team, setting.type);
+          let entity = await piece.createPiece();
+          entity.scale.set(SCALE,SCALE,SCALE);
+          entity.position.set(5*j-20,5*i-22.5,0);
+          scene.add(entity);
+          currentLayout[i][j] = piece;
         }
       }
     }
@@ -289,12 +289,12 @@ import Stats from 'three/addons/libs/stats.module.js';
         if (Math.random() < density) {
           let randomTeam = Math.floor(1+2*Math.random());
           let randomType = TYPES.charAt(Math.floor(7*Math.random()));
-          PieceFactory.setProperty(randomTeam,randomType);
-          let piece = await PieceFactory.createPiece();
-          piece.scale.set(SCALE, SCALE, SCALE);
-          piece.position.set(5*j-20,5*i-22.5,0);
-          currentLayout[i][j] = piece.id;
-          scene.add(piece);
+          let piece = new Piece(randomTeam, randomType);
+          let entity = await piece.createPiece();
+          entity.scale.set(SCALE, SCALE, SCALE);
+          entity.position.set(5*j-20,5*i-22.5,0);
+          scene.add(entity);
+          currentLayout[i][j] = piece;
         }
       }
     }
@@ -355,30 +355,22 @@ import Stats from 'three/addons/libs/stats.module.js';
 
     raycaster.setFromCamera(pointer, camera);
     const intersects = raycaster.intersectObject(scene.getObjectByName("grid"));
-    let hoveredId = null;
+    let hovered = null;
     if (intersects.length !== 0) {
       let contactPos = intersects[0].point;
       let boardCol = Math.floor((contactPos.x + 22.5) / 5);
       let boardRow = Math.floor((contactPos.y + 25) / 5);
-      hoveredId = currentLayout[boardRow][boardCol];
+      hovered = currentLayout[boardRow][boardCol];
     }
-    if (!(intersects.length !== 0 && hoveredId && hoveredId === highlightedId) && highlightedId) {
+    if (!(intersects.length !== 0 && hovered && hovered === highlighted) && highlighted) {
       // remove highlight of current highlighted piece
-      let highlightedPiece = scene.getObjectById(highlightedId);
-      let components = highlightedPiece.children;
-      for (let i = 0; i < components.length; i++) {
-        components[i].material.emissive.setHex(0x000000);
-      }
-      highlightedId = null;
+      highlighted.removeHighlight();
+      highlighted = null;
     }
-    if (intersects.length !== 0 && hoveredId && !(highlightedId && hoveredId === highlightedId)) {
+    if (intersects.length !== 0 && hovered && !(highlighted && hovered === highlighted)) {
       //  add highlight to hovered piece
-      let hoveredPiece = scene.getObjectById(hoveredId);
-      let components = hoveredPiece.children;
-      for (let i = 0; i < components.length; i++) {
-        components[i].material.emissive.setHex(0x444444);
-      }
-      highlightedId = hoveredId;
+      hovered.addHighlight();
+      highlighted = hovered;
     }
     renderer.render(scene, camera);
   }
@@ -418,64 +410,48 @@ import Stats from 'three/addons/libs/stats.module.js';
 
     raycaster.setFromCamera(pointer, camera);
     const intersects = raycaster.intersectObject(scene.getObjectByName("grid"));
-    let clickedId = null;
-    let currentSelectedId = selectedId; // ensure that the value doesn't change after updates on selectedId
+    let clicked = null;
+    let currentSelected = selected; // ensure that the value doesn't change after updates on selectedId
     let currentTeam = myTeam;
     let clickedPos = null;
     let contactPos = null;
-    let clickedPiece = null;
     if (intersects.length !== 0) {
       contactPos = intersects[0].point;
       let boardCol = Math.floor((contactPos.x + 22.5) / 5);
       let boardRow = Math.floor((contactPos.y + 25) / 5);
       clickedPos = new THREE.Vector2(boardRow, boardCol);
-      clickedId = currentLayout[clickedPos.x][clickedPos.y];
-      clickedPiece = scene.getObjectById(clickedId);
+      clicked = currentLayout[clickedPos.x][clickedPos.y];
     }
 
-    if (intersects.length !== 0 && clickedId && dumbGetTeam(clickedPiece) !== myTeam && selectedId && rule(clickedPiece, currentLayout)) {
+    if (intersects.length !== 0 && clicked && clicked.getTeam() !== myTeam && selected && rule()) {
       // P4: move clicked piece out of the board
-      clickedPiece.position.x = 40;
+      clicked.moveOut();
       currentLayout[clickedPos.x][clickedPos.y] = null;
     }
-    if (intersects.length !== 0 && selectedId && rule(clickedPiece, currentLayout) && !(clickedId && dumbGetTeam(clickedPiece) === myTeam)) {
+    if (intersects.length !== 0 && selected && rule() && !(clicked && clicked.getTeam() === myTeam)) {
       // P3: move the selected piece to clicked position
-      let selectedPiece = scene.getObjectById(selectedId);
-      selectedPiece.position.x = 5 * Math.floor(contactPos.x / 5 + 0.5);
-      selectedPiece.position.y = 5 * Math.floor(contactPos.y / 5) + 2.5;
-      currentLayout[clickedPos.x][clickedPos.y] = selectedId;
+      selected.moveTo(5 * Math.floor(contactPos.x / 5 + 0.5), 5 * Math.floor(contactPos.y / 5) + 2.5);
+      currentLayout[clickedPos.x][clickedPos.y] = selected;
       currentLayout[selectedPos.x][selectedPos.y] = null;
       myTeam = (myTeam === 1) ? 2 : 1; // TODO: abstract strategy???
     }
-    if (selectedId) {
+    if (selected) {
       // P2: unselect currently selected piece
-      let selectedPiece = scene.getObjectById(selectedId);
-      selectedPiece.rotation.x = 0;
-      selectedPiece.position.z = 0;
-      let scale = 4.5 / 40;
-      selectedPiece.scale.set(scale,scale,scale);
-      selectedId = null;
+      selected.unselect();
+      selected = null;
       selectedPos.set(-1,-1);
     }
-    if (intersects.length !== 0 && clickedId && dumbGetTeam(clickedPiece) === currentTeam && !(currentSelectedId && clickedId === currentSelectedId)) {
+    if (intersects.length !== 0 && clicked && clicked.getTeam() === currentTeam && !(currentSelected && clicked === currentSelected)) {
       // P5: select the clicked piece
-      clickedPiece.rotation.x = - THREE.MathUtils.degToRad(20);
-      clickedPiece.position.z = 2.4;
-      let scale = 4.9 / 40;
-      clickedPiece.scale.set(scale,scale,scale);
+      clicked.select();
       selectedPos = clickedPos;
-      selectedId = currentLayout[selectedPos.x][selectedPos.y];
+      selected = currentLayout[selectedPos.x][selectedPos.y];
     }
     renderer.render(scene, camera);
   }
 
-  // TODO: This should be a getter method for piece class.
-  function dumbGetTeam(piece) {
-    return piece ? parseInt(piece.name.charAt(6)) : null;
-  }
-
   // TODO: This should be a method for board class
-  function rule(piece, board) {
+  function rule() {
     return true;
   }
 
