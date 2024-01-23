@@ -3,12 +3,10 @@
  * This file defines the generation and behavior of a cchess piece given the piece's team and type.
  *  The piece has customizable attributes like engraving, fonts, and texture.
  *
- * // TODO: try prototype but not the factory
  * // TODO: also make a 'class' for the board (to store the positions & calculate legal moves)
  * // TODO: add AnimationClip, KeyframeTrack to the pieces (move)
  * // TODO: use clone() to improve efficiency. store the already produced piece ({1K:Mesh, 1G: Mesh, 1E: undefined, ...})
- * // TODO: make setHighlight a method for pieces
- * //    for all material m in that piece: m.emissive.setHex(color);
+ * // TODO: use appearance manager to deal with font/segment/engrave/base.
  */
 
 'use strict';
@@ -240,7 +238,7 @@ export class Piece {
      * icomoon(western): 帥仕相馬車炮兵岩
      * (for board)
      * 方正海体楷书繁体(fz-ht-kai): 楚河汉界
-     * 黑体(heiti): 一二三四五六七八九123456789
+     * 黑体(heiti): 一二三四五六七八九123456789 // TODO:再加ⅠⅡⅢⅣⅤⅥⅦⅧⅨ
      */
     // TODO: add manager for this class to deal with settings.
     const FONTS = ['western', 'fz-lbs-lishu', 'fz-xingkai', 'ar-yankai', 'fz-wei'];
