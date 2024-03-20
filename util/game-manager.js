@@ -18,7 +18,7 @@ export class GameManager {
   static #types = "-RNCGEPK";
 
   // 12=team1,type2
-  // team-1=stone's team; team9=hostile neutral's team
+  // team[-1]=stone's team; team[9]=hostile neutral's team
   // 1=R 2=N 3=C 4=G 5=E 6=P 7=K
   // 1st row = black home; 10th row = red home; 1st column = 九 for red
   constructor() {
@@ -86,10 +86,16 @@ export class GameManager {
   // if it's a check/capture, indicate that with return
   makeMove(moveStr) {
     let move = this.#intepretMove(moveStr);
-    this.#lastCaptured = this.#layout[move.er][move.ec];
-    this.#layout[move.er][move.ec] = this.#layout[move.sr][move.sc];
-    this.#layout[move.sr][move.sc] = 0;
-    this.#lastMove = moveStr;
+    if (this.validateMove(move)) {
+      this.#lastCaptured = this.#layout[move.er][move.ec];
+      this.#layout[move.er][move.ec] = this.#layout[move.sr][move.sc];
+      this.#layout[move.sr][move.sc] = 0;
+      this.#lastMove = moveStr;
+      this.#currentPlayer = this.getNextPlayer();
+    } else {
+      console.log("Move not accepted.");
+    }
+
   }
 
   /**
@@ -115,6 +121,7 @@ export class GameManager {
       this.#layout[move.er][move.ec] = this.#lastCaptured;
       this.#lastCaptured = 0;
       this.#lastMove = "";
+      this.#currentPlayer = (this.#currentPlayer === 1) ? 2 : (this.#currentPlayer - 1);
     } else {
       console.log("There is no reverse available.");  // cannot reverse more than once/ at the start of the game
     }
@@ -123,8 +130,22 @@ export class GameManager {
   // move has to be 2 valid positions. 01-10,A-I. Any combination
   // return true if validated, false otherwise
   validateMove(move) {
-    // check start: must be ally
+    // validate input.    * a<=x<=b <=> (x-a)(x-b)<=0
+    if (move.sr * (move.sr - 9) > 0 || move.er * (move.er - 9) > 0 ||
+          move.sc * (move.sc - 8) > 0 || move.ec * (move.ec - 8) > 0) {
+      throw new Error(`Illegal Move: Array Notation (${move.sr}, ${move.sc}) to (${move.er}, ${move.ec})`);
+    }
+
+    // check start: must be ally [don't care about stone yet]
+    if (Math.floor(this.#layout[move.sr][move.sc] / 10) !== this.#currentPlayer) {
+      console.log(this.#currentPlayer);
+      console.log("You cannot move this piece.")
+      return false;
+    }
+
     // check end: must be empty/enemy & different from start
+    if (this.#layout[move.er][move.ec] !== 0)
+
     // check rule:
     //    R: nothing in between
     //    C: end empty: nothing in between; end enemy: 1 piece in between
@@ -133,6 +154,7 @@ export class GameManager {
     //    E: stay in its side, 2x2 move, no piece at block pos. Or end enemy king & nothing in between
     //    K: within palace its side, 1x0 move
     //    P: forward 1, or on opponent side (calculated from king pos & its pos) left & right
+    return true;
   }
 
   giveValidPos(pos) {
