@@ -4,13 +4,13 @@
  */
 
 'use strict';
-import {GameManager} from './util/game-manager.js';
+import {AbstractGame} from '../util/AbstractGame.js';
 
 (function() {
   window.addEventListener('load', init);
 
-  function init() {
-    let game = new GameManager();
+  async function init() {
+    let game = await AbstractGame.initialize();
     let gameCopy = game;
     console.log(game.toString());
     gameCopy.recallMove();

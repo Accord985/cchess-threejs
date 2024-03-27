@@ -91,7 +91,7 @@ export class Piece {
   }
 
   moveOut() {
-    this.#piece.position = 40;
+    this.#piece.position.x = 40;
   }
 
   moveTo(x, y) {
@@ -144,7 +144,7 @@ export class Piece {
   #generateMaterial(repeatX, repeatY, offsetX, offsetY) {
     let fileNames = ['whiteoak','walnut','uv_grid_opengl'];
     let fileName = (this.#type === 'S') ? 'granite' : fileNames[Piece.#BASE_TYPE-1] || fileNames[fileNames.length-1];
-    const map = new THREE.TextureLoader().load(`public/${fileName}.jpg`);
+    const map = new THREE.TextureLoader().load(`pic/${fileName}.jpg`);
     map.wrapS = map.wrapT = THREE.RepeatWrapping; // texture infinitely repeats in both directions
     map.anisotropy = 32; // responsible for fidelity
     map.colorSpace = THREE.SRGBColorSpace; // needed for colored models
@@ -244,7 +244,7 @@ export class Piece {
     const FONTS = ['western', 'fz-lbs-lishu', 'fz-xingkai', 'ar-yankai', 'fz-wei'];
     let fontName = FONTS[Piece.#FONT_TYPE - 1];
     try {
-      let font = await fontLoader.loadAsync(`/public/fonts/${fontName}.json`);
+      let font = await fontLoader.loadAsync(`util/fonts/${fontName}.json`);
       let char = (Piece.#FONT_TYPE===1) ? Piece.#CHARACTERS[this.#type].charAt(0) : Piece.#CHARACTERS[this.#type].charAt(this.#team-1) || Piece.#CHARACTERS[this.#type].charAt(0); // 'a' || 's' => 'a'; 's'.charAt(2) => ''; '' || 's' => 's'
       const settings = {
         font:font,
