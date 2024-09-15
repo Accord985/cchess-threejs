@@ -13,15 +13,37 @@ type Move = {
   sc: number,
   er: number,
   ec: number
+};
+
+type Instruction = {
+  move: Move,
+  success: boolean,
+  status: string,
+}
+
+export interface AbstractGame {
+  _layout: number[][];
+  _currentPlayer: number;
+  _winner: number;
+  getLayout(): number[][];
+  toString(): string;
+  isGameOver(): boolean;
+  getWinner(): number;
+  getCurrPlayer(): number;
+  getNextPlayer(): number;
+  makeMove(moveStr: string): number;
 }
 
 /**
  *
  * creates an instance of a game. Decides the rule of the game, and responsible for the status
  *   including the current moving player, winner, and whether the game has ended.
- * AbstractGame(base) ==> Official; Casual; DoubleStep; ThreePlayer
+ * AbstractGame(base) ==> [rules] Official; Casual; DoubleStep; ThreePlayer
+ *                        [modes] Sandbox; Record; WithAI; WithPlayer
  *
- * Use command: tsc --target es2015 ./public/util/AbstractGame.ts to compile the code into js file.
+ * Use this command to compile all the code into js file in compiled folder:
+ *    rm public/util/compiled/* ; tsc public/util/*.ts --target es2015 --outDir public/util/compiled/
+ * (deletes all file in compiled folder and compiles js from all ts files)
  * --target es2015 ensures the code exports normally
  *
  * AbstractGame:
@@ -29,7 +51,7 @@ type Move = {
  *
  * checkPieceAt(): returns the piece at the position. if nothing returns 0
  */
-class AbstractGame {
+export class CasualSandbox implements AbstractGame {
   _layout: number[][];  // 2D array (10*9) of the game layout.
   // Elements of layout: 12=team1,type2
   // 1=R 2=N 3=C 4=G 5=E 6=P 7=K
@@ -39,12 +61,8 @@ class AbstractGame {
   _lastMove: string;  // string representing the move
   _lastCaptured: number;  // same rule as the layout
   _winner: number;  // -1=not ended; 0=draw, not 0 = # of the winner
-  static _types: string = "-RNCGEPKS";
 
   private constructor(layout: number[][]) {
-    // if (this.constructor === AbstractGame) {
-    //   throw new Error("Cannot initiate the abstract class AbstractGame");
-    // }
     this._currentPlayer = 1;
     this._lastMove = "";
     this._lastCaptured = 0;
@@ -52,12 +70,12 @@ class AbstractGame {
     this._layout = layout;
   }
 
-  static async initialize(): Promise<AbstractGame> {
+  static async initialize(): Promise<CasualSandbox> {
     try {
       let resp: Response = await fetch("/util/layouts.json");
       resp = await statusCheck(resp);
       let result: LayoutTemplate = await resp.json();
-      return new AbstractGame(result.official);
+      return new CasualSandbox(result.official);
     } catch(e) {
       console.error(e);
       let emptyLayout: number[][] = new Array(10);
@@ -65,8 +83,12 @@ class AbstractGame {
         let columns: number[] = new Array(9).fill(0);  // array of length 9 and EMPTY slots amd fill all slots with 0s
         emptyLayout[i] = columns;
       }
-      return new AbstractGame(emptyLayout);
+      return new CasualSandbox(emptyLayout);
     }
+  }
+
+  getLayout(): number[][] {
+    return this._layout;
   }
 
   /**
@@ -76,9 +98,13 @@ class AbstractGame {
    *  ...
    * 01
    *    .A .B .C .D .E .F .G .H .I
+   * FOR DEBUGGING ONLY
    */
   toString(): string {
     let result: string = "";
+    // types (original): "-RNCGEPKS"
+    let redTypes: string = "～俥傌炮仕相兵帥";
+    let blackTypes: string = "～車馬砲士象卒將";
     for (let i = 0; i < 10; i++) {
       result += (i === 0) ? " " : " 0";
       result += (10 - i);
@@ -88,11 +114,11 @@ class AbstractGame {
         let team: number = Math.floor(curr / 10);
         let type: number = curr % 10;
         result += (team === 0) ? "-" : team;
-        result += AbstractGame._types.charAt(type);
+        result += (team === 1) ? redTypes.charAt(type) : blackTypes.charAt(type);
       }
       result += "\n";
     }
-    result += "     A  B  C  D  E  F  G  H  I\n";
+    result += "     Ａ  Ｂ  Ｃ  Ｄ  Ｅ  Ｆ  Ｇ  Ｈ  Ｉ\n";
     return result;
   }
 
@@ -128,9 +154,10 @@ class AbstractGame {
         // TODO: check if there is a check
         let check: boolean = false;
         let capture: boolean = this._lastCaptured !== 0;
+        this._updateWinner();
         return (check) ? 2 : (capture ? 1 : 0);
       } else {
-        console.log("Move not accepted.");
+        // console.log("Move not accepted.");
         return -1;
       }
     } catch(e) {
@@ -169,16 +196,18 @@ class AbstractGame {
     return result;
   }
 
-  recallMove(): undefined {
-    if (this._lastMove !== "") {
+  recallMove(): boolean {
+    if (this._lastMove !== "" && !this.isGameOver()) {
       let move: Move = this.interpretMove(this._lastMove);
       this._layout[move.sr][move.sc] = this._layout[move.er][move.ec];
       this._layout[move.er][move.ec] = this._lastCaptured;
       this._lastCaptured = 0;
       this._lastMove = "";
       this._currentPlayer = (this._currentPlayer === 1) ? 2 : (this._currentPlayer - 1);
+      return true;
     } else {
-      console.log("There is no reverse available.");  // cannot reverse more than once/ at the start of the game
+      // console.log("There is no reverse available.");  // cannot reverse more than once/ at the start of the game/after the game ended
+      return false;
     }
   }
 
@@ -331,9 +360,17 @@ class AbstractGame {
     return [];
   }
 
+  resign(): void {
+    this._winner = this.getNextPlayer();
+  }
+
+  draw(): void {
+    this._winner = 0;
+  }
+
   // check in palace if there is a king at either side. If someone lose their king they lose
   // better way to do this: update redAlive & blackAlive every time they move so you don't need to check 18 times
-  private _updateWinner(): undefined {
+  private _updateWinner(): void {
     // red-1 palace at row 7-9 col 3-5 (array notation)
     // black-2 palace at row 0-2 col 3-5
     let redAlive : boolean = false;
@@ -365,5 +402,3 @@ async function statusCheck(res: Response): Promise<Response> {
   }
   return res;
 }
-
-export {AbstractGame};

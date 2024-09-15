@@ -1,0 +1,98 @@
+#board > section, #mark-1, #mark-2 {
+  position: absolute;
+}
+
+#board {
+  /* credits given to www.postermywall.com/ for the wooden background */
+  width: 450px;
+  height: 500px;
+  background: center/450px 500px no-repeat url('./img/board.svg'),
+      center/contain url("./img/background.jpg");
+  padding: 30px 27px;
+  border-radius: 1%;
+  box-shadow: 7px 7px 5px burlywood;
+  border: 3px ridge burlywood;
+  display: grid;
+  grid: repeat(10, 50px) / repeat(9, 50px);
+}
+
+#board > div {
+  width: 50px;
+  height: 50px;
+}
+
+#board > div:hover {
+  box-shadow: inset 5px 5px purple, inset -5px -5px purple;
+}
+
+#pieces > div {
+  width: 50px;
+  height: 50px;
+  line-height: 44.7px;
+  font-size: 35px;
+  background: center / contain url("./img/piece.jpg");
+  border-radius: 50%;
+  border: 3px chocolate solid;
+  box-sizing: border-box;
+  position: absolute;
+  text-align: center;
+  transform: scale(0.9);
+  transition: 0.2s linear;
+  filter: drop-shadow(4px 4px 7px rgba(0,0,0,0.6));
+  cursor: pointer;
+  user-select: none;
+}
+
+#pieces > div {
+  /* font-family: 方正行楷_GBK; */
+  font-family: 方正刘炳森隶书 简繁;
+  /* font-family: 文鼎超颜楷简繁; */
+}
+
+#pieces > div.team-1 {color: red;}
+#pieces > div.team-2 {color: black;}
+#pieces > div.team-3 {color: green;}
+
+#board div.rank-1 {top: 450px;}
+#board div.rank-2 {top: 400px;}
+#board div.rank-3 {top: 350px;}
+#board div.rank-4 {top: 300px;}
+#board div.rank-5 {top: 250px;}
+#board div.rank-6 {top: 200px;}
+#board div.rank-7 {top: 150px;}
+#board div.rank-8 {top: 100px;}
+#board div.rank-9 {top: 50px;}
+#board div.rank-10 {top: 0px;}
+
+#board div.file-9 {left: 0px;}
+#board div.file-8 {left: 50px;}
+#board div.file-7 {left: 100px;}
+#board div.file-6 {left: 150px;}
+#board div.file-5 {left: 200px;}
+#board div.file-4 {left: 250px;}
+#board div.file-3 {left: 300px;}
+#board div.file-2 {left: 350px;}
+#board div.file-1 {left: 400px;}
+
+#pieces > div.selected {
+  filter: drop-shadow(15px 15px 9px rgba(0,0,0,0.4));
+  transform: scale(0.95) rotateX(20deg);
+  z-index: 2;
+}
+
+#pieces > div.captured, .hidden {
+  display: none;
+}
+
+#board > div.markDot {
+  background: center/50% url("./img/board/mark-dot.svg") no-repeat;
+}
+
+#board > div.markRing {
+  background: center/100% url("./img/board/mark-piece.svg") no-repeat;
+}
+
+/* TODO: when the piece should not be moved, set cursor to not-allowed */
+/* #pieces:not(:has(.selected)) > div.rival {
+  cursor: not-allowed;
+} */

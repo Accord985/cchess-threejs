@@ -16,7 +16,3 @@ body {
 .hidden {
   display: none;
 }
-
-#board {
-  font-family: monospace;
-}
