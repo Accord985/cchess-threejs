@@ -6,8 +6,9 @@
   /* credits given to www.postermywall.com/ for the wooden background */
   width: 450px;
   height: 500px;
-  background: center/450px 500px no-repeat url('./img/board.svg'),
-      center/contain url("./img/background.jpg");
+  background: center/450px 500px no-repeat url('./pic/flatCChess/board.svg'),
+      center/contain url("./pic/board-lighting.svg"),
+      center/contain url("./pic/whiteoak.jpg");
   padding: 30px 27px;
   border-radius: 1%;
   box-shadow: 7px 7px 5px burlywood;
@@ -30,7 +31,7 @@
   height: 50px;
   line-height: 44.7px;
   font-size: 35px;
-  background: center / contain url("./img/piece.jpg");
+  background: center / contain url("./pic/whiteoak.jpg");
   border-radius: 50%;
   border: 3px chocolate solid;
   box-sizing: border-box;
@@ -85,11 +86,11 @@
 }
 
 #board > div.markDot {
-  background: center/50% url("./img/board/mark-dot.svg") no-repeat;
+  background: center/50% url("./pic/flatCChess/mark-dot.svg") no-repeat;
 }
 
 #board > div.markRing {
-  background: center/100% url("./img/board/mark-piece.svg") no-repeat;
+  background: center/100% url("./pic/flatCChess/mark-piece.svg") no-repeat;
 }
 
 /* TODO: when the piece should not be moved, set cursor to not-allowed */

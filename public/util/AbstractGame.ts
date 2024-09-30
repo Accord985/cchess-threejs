@@ -41,7 +41,7 @@ export interface AbstractGame {
  * AbstractGame(base) ==> [rules] Official; Casual; DoubleStep; ThreePlayer
  *                        [modes] Sandbox; Record; WithAI; WithPlayer
  *
- * Use this command to compile all the code into js file in compiled folder:
+ * Use this command to compile all the code into js file in compiled folder: (use git bash console)
  *    rm public/util/compiled/* ; tsc public/util/*.ts --target es2015 --outDir public/util/compiled/
  * (deletes all file in compiled folder and compiles js from all ts files)
  * --target es2015 ensures the code exports normally

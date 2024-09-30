@@ -5,25 +5,32 @@ class CChess {
     getGameElement() {
         return this._gameElement;
     }
+    operateBoard() {
+        let moveStr = this.interpret();
+        if (moveStr !== '') {
+            let status = this._game.makeMove(moveStr);
+            this.update(status, moveStr);
+        }
+    }
 }
 export class DumbCChess extends CChess {
     constructor(game) {
         super(game);
-        this._board = document.createElement('pre');
-        this._input = document.createElement('input');
+        this._board = gen('pre');
+        this._input = gen('input');
         this._input.type = 'text';
         this._input.minLength = 6;
         this._input.maxLength = 6;
-        this._recall = document.createElement('button');
+        this._recall = gen('button');
         this._recall.textContent = 'Recall last move';
-        this._resign = document.createElement('button');
+        this._resign = gen('button');
         this._resign.textContent = 'Resign';
-        this._draw = document.createElement('button');
+        this._draw = gen('button');
         this._draw.textContent = 'End with Draw';
-        this._move = document.createElement('button');
+        this._move = gen('button');
         this._move.textContent = 'Make the Move';
-        this._gameState = document.createElement('p');
-        this._moveState = document.createElement('p');
+        this._gameState = gen('p');
+        this._moveState = gen('p');
         this._gameElement = this._buildGameElement();
         this._setup();
     }
@@ -66,16 +73,13 @@ export class DumbCChess extends CChess {
         this._gameState.textContent = "Current Player: " + this._game.getCurrPlayer();
         // annonymous function is necessary otherwise the meaning of this will not
         // be the object but the button pressed
-        this._move.addEventListener('click', () => {
-            let moveStr = this.interpret();
-            if (moveStr !== '') {
-                let status = this.playMove(moveStr);
-                this.updateAfterMove(status, moveStr);
-            }
-        });
+        this._move.addEventListener('click', this.operateBoard);
         this._recall.addEventListener('click', () => { this.recallMove(); });
         this._draw.addEventListener('click', () => { this.draw(); });
         this._resign.addEventListener('click', () => { this.resign(); });
+    }
+    interpret() {
+        return this._input.value;
     }
     displayFinish(winner) {
         this._gameState.textContent = (winner === 0) ?
@@ -93,31 +97,26 @@ export class DumbCChess extends CChess {
     displayCheck() {
         this._moveState.textContent = 'Check!';
     }
-    interpret() {
-        return this._input.value;
-    }
-    playMove(moveStr) {
-        let status = this._game.makeMove(moveStr);
-        this._board.textContent = this._game.toString();
-        return status;
-    }
-    updateAfterMove(status, moveStr) {
+    update(status, moveStr) {
         this._gameState.textContent = "Current Player: " + this._game.getCurrPlayer();
+        if (status !== -1 && status !== 0 && status !== 1 && status !== 2) {
+            this._moveState.textContent = `Error: Status ${status} is not recognized.`;
+        }
         if (status === -1) {
             let displayed = (moveStr === "") ? "empty" : moveStr.toUpperCase();
             this._moveState.textContent = `Move [${displayed}] is not accepted`;
         }
-        else if (status === 1) {
-            this.displayCapture();
-        }
-        else if (status === 2) {
-            this.displayCheck();
-        }
-        else if (status === 0) {
-            this._moveState.textContent = '';
-        }
         else {
-            this._moveState.textContent = `Error: Status ${status} is not recognized.`;
+            this._board.textContent = this._game.toString();
+            if (status === 1) {
+                this.displayCapture();
+            }
+            else if (status === 2) {
+                this.displayCheck();
+            }
+            else {
+                this._moveState.textContent = '';
+            }
         }
         this._input.value = '';
         // check if game ends
@@ -150,10 +149,11 @@ export class FlatCChess extends CChess {
     constructor(game) {
         super(game);
         this._selected = null;
-        this._gameElement = this._gen('section');
-        this._board = this._gen('section');
+        this._gameElement = this._buildGameElement();
+        this._dotMark = null;
+        this._ringMark = null;
     }
-    // <section id="board">
+    // <section>
     //   <div></div>x90, with id square{rank}-{file}
     //   <section id="pieces">
     //     add elements based on layout like this:
@@ -161,16 +161,60 @@ export class FlatCChess extends CChess {
     //   </section>
     // </section>
     _buildGameElement() {
+        let result = gen('section');
+        result.id = 'board';
+        result.translate = false;
+        // rank: 10th=0-8; 9th=9-17
+        // file: 1=8,17,...; 2=7,16,...
+        for (let i = 0; i < 90; i++) {
+            let currSquare = gen('div');
+            let rank = 10 - Math.floor(i / 9);
+            let file = 9 - i % 9;
+            currSquare.id = `square${rank}-${file}`;
+            currSquare.addEventListener('click', (evt) => {
+                if (!(evt.target instanceof HTMLDivElement)) {
+                    throw new Error("How is this not a div??");
+                }
+                this.selectSquare(evt.target);
+            });
+            result.append(currSquare);
+        }
+        let pieces = gen('section');
+        pieces.id = 'pieces';
+        // add elements based on layout
+        let layout = this._game.getLayout();
+        let redTypes = '車馬炮仕相兵帥';
+        let blackTypes = '車馬炮士象卒將';
+        for (let i = 0; i < 10; i++) {
+            for (let j = 0; j < 9; j++) {
+                let pieceNum = layout[i][j];
+                if (pieceNum !== 0) {
+                    let team = Math.floor(pieceNum / 10);
+                    let type = pieceNum % 10 - 1;
+                    let currPiece = gen('div');
+                    currPiece.textContent = (team === 1) ?
+                        redTypes.charAt(type) : blackTypes.charAt(type);
+                    currPiece.classList.add(`team-${team}`);
+                    currPiece.classList.add(`file-${9 - j}`);
+                    currPiece.classList.add(`rank-${10 - i}`);
+                    currPiece.addEventListener('click', (evt) => {
+                        // evt.target is the target of the event (selected piece)
+                        if (!(evt.target instanceof HTMLDivElement)) {
+                            throw new Error("How did you click this?");
+                        }
+                        this.selectPiece(evt.target);
+                    });
+                    pieces.appendChild(currPiece);
+                }
+            }
+        }
+        result.appendChild(pieces);
+        return result;
     }
     interpret() {
-        console.log('interpret the move');
         return "";
     }
-    playMove(moveStr) {
-        console.log('play move ' + moveStr);
-        return 0;
-    }
-    updateAfterMove(status) {
+    update(status) {
         console.log('updating the board after the move');
     }
     recallMove() {
@@ -191,39 +235,7 @@ export class FlatCChess extends CChess {
     displayFinish(winner) {
         console.log('wrapping up... Remove all control');
     }
-    init() {
-        this.populateBoard();
-        let pieces = this._qsa('#pieces div');
-        for (let i = 0; i < pieces.length; i++) {
-            pieces[i].addEventListener('click', (evt) => {
-                // evt.target is the target of the event (selected piece)
-                if (!(evt.target instanceof HTMLElement)) {
-                    throw new Error();
-                }
-                this.selectPiece(evt.target);
-            });
-        }
-        let positions = this._qsa("#board > div");
-        for (let i = 0; i < positions.length; i++) {
-            positions[i].addEventListener('click', (evt) => {
-                if (!(evt.target instanceof HTMLElement)) {
-                    throw new Error();
-                }
-                this.selectSquare(evt.target);
-            });
-        }
-    }
-    // rank: 10th=0-8; 9th=9-17
-    // file: 1=8,17,...; 2=7,16,...
-    populateBoard() {
-        let board = this._board;
-        for (let i = 0; i < 90; i++) {
-            let newItem = this._gen('div');
-            let rank = 10 - Math.floor(i / 9);
-            let file = 9 - i % 9;
-            newItem.id = 'square' + rank + '-' + file;
-            board.append(newItem);
-        }
+    displayMoveFail() {
     }
     isRival(pieceA, pieceB) {
         if ((!pieceA.classList.contains("team-1") && !pieceA.classList.contains("team-2")) ||
@@ -235,27 +247,38 @@ export class FlatCChess extends CChess {
         return (aInOne && !bInOne) || (!aInOne && bInOne);
     }
     selectPiece(target) {
-        let selected = this._qs('.selected');
-        if (selected) {
-            if (this.isRival(target, selected)) {
-                let targetCoord = this.getCoordinates(target);
-                target.classList.add('captured');
-                target.classList.replace('file-' + targetCoord.file, 'file-0');
-                target.classList.replace('rank-' + targetCoord.rank, 'rank-0');
-                this.moveSelected(targetCoord);
+        if (this._selected) {
+            if (this.isRival(target, this._selected)) {
+                // attempt to move and update according to status
+                let startCoord = this.getCoordinates(this._selected);
+                let srow = ((startCoord.rank < 10) ? '0' : '') + startCoord.rank;
+                let scol = 'ABCDEFGHI'.charAt(9 - startCoord.file);
+                let endCoord = this.getCoordinates(target);
+                let erow = ((endCoord.rank < 10) ? '0' : '') + endCoord.rank;
+                let ecol = 'ABCDEFGHI'.charAt(9 - endCoord.file);
+                let moveStr = srow + scol + erow + ecol; // TODO: change format of move
+                // TODO: NOW RETURN interpreted moveStr
+                // let targetCoord = this.getCoordinates(target);
+                // target.classList.add('captured');
+                // target.classList.replace('file-'+targetCoord.file, 'file-0');
+                // target.classList.replace('rank-'+targetCoord.rank, 'rank-0');
+                // this.moveSelected(targetCoord);
             }
-            else if (!target.classList.contains('selected')) {
+            else if (target !== this._selected) {
                 // there is selected & not rival:
                 // if clicked on selected itself, deselect, otherwise change the selected
-                selected.classList.remove('selected');
+                this._selected.classList.remove('selected');
                 target.classList.add('selected');
+                this._selected = target;
             }
             else {
-                selected.classList.remove('selected');
+                this._selected.classList.remove('selected');
+                this._selected = null;
             }
         }
         else {
             target.classList.add('selected');
+            this._selected = target;
         }
     }
     selectSquare(target) {
@@ -264,9 +287,9 @@ export class FlatCChess extends CChess {
             rank: parseInt(coordStr.substring(0, coordStr.indexOf('-'))),
             file: parseInt(coordStr.substring(coordStr.indexOf('-') + 1))
         };
-        let pieceInPos = this._qs(`#pieces > .rank-${squareCoord.rank}.file-${squareCoord.file}`);
+        let pieceInPos = qs(`#pieces > .rank-${squareCoord.rank}.file-${squareCoord.file}`);
         if (!pieceInPos) {
-            if (this._qs('.selected')) {
+            if (qs('.selected')) {
                 this.moveSelected(squareCoord);
             }
         }
@@ -300,57 +323,64 @@ export class FlatCChess extends CChess {
     }
     // right now startPos must contain a piece
     makeMove(startPos, endPos) {
-        let startPiece = this._qs(`#pieces > .rank-${startPos.rank}.file-${startPos.file}`);
+        let startPiece = qs(`#pieces > .rank-${startPos.rank}.file-${startPos.file}`);
         if (!startPiece) {
             throw new Error("No piece to move");
         }
         // no dot no ring: put the dot and ring.
         // dot and ring: remove previous dot and ring and add new.
-        // if (this._qs(".markDot")) {
-        //   this._qs(".markDot").classList.remove("markDot");
-        // }
-        // if (this._qs(".markRing")) {
-        //   this._qs(".markRing").classList.remove("markRing");
-        // }
-        // startPiece.classList.replace('file-'+startPos.file, 'file-'+endPos.file);
-        // startPiece.classList.replace('rank-'+startPos.rank, 'rank-'+endPos.rank);
-        // id(`square${startPos.rank}-${startPos.file}`).classList.add("markDot");
-        // setTimeout(() => {
-        //   startPiece.classList.remove('selected');
-        //   id(`square${endPos.rank}-${endPos.file}`).classList.add("markRing");
-        // }, 200);
+        if (this._dotMark) {
+            this._dotMark.classList.remove("markDot");
+        }
+        if (this._ringMark) {
+            this._ringMark.classList.remove("markRing");
+        }
+        startPiece.classList.replace('file-' + startPos.file, 'file-' + endPos.file);
+        startPiece.classList.replace('rank-' + startPos.rank, 'rank-' + endPos.rank);
+        this._selected = null; // TODO: why selected in here?
+        this._dotMark = id(`square${startPos.rank}-${startPos.file}`);
+        this._dotMark.classList.add("markDot");
+        setTimeout(() => {
+            startPiece.classList.remove('selected');
+            this._ringMark = id(`square${endPos.rank}-${endPos.file}`);
+            this._ringMark.classList.add("markRing");
+        }, 200);
     }
-    /**
-     * Returns the element that has the ID attribute with the specified value,
-     *  or null if not found.
-     * @param {string} idName - element ID
-     * @returns {HTMLElement} DOM object associated with id.
-     */
-    _id(idName) {
-        return document.getElementById(idName);
+}
+/**
+ * Returns the element that has the ID attribute with the specified value,
+ *  or null if not found.
+ * @param {string} idName - element ID
+ * @returns {HTMLElement} DOM object associated with id.
+ */
+function id(idName) {
+    let result = document.getElementById(idName);
+    if (!result) {
+        throw new Error('Cannot find element with id ' + idName);
     }
-    /**
-     * Returns the first element that matches the given CSS selector.
-     * @param {string} selector - CSS query selector.
-     * @returns {object} The first DOM object matching the query.
-     */
-    _qs(selector) {
-        return document.querySelector(selector);
-    }
-    /**
-     * Returns the array of elements that match the given CSS selector.
-     * @param {string} selector - CSS query selector
-     * @returns {object[]} array of DOM objects matching the query.
-     */
-    _qsa(selector) {
-        return document.querySelectorAll(selector);
-    }
-    /**
-     * Returns a new element with the given tag name.
-     * @param {string} tagName - HTML tag name for new DOM element.
-     * @returns {object} New DOM object for given HTML tag.
-     */
-    _gen(tagName) {
-        return document.createElement(tagName);
-    }
+    return result;
+}
+/**
+ * Returns the first element that matches the given CSS selector.
+ * @param {string} selector - CSS query selector.
+ * @returns {object} The first DOM object matching the query.
+ */
+function qs(selector) {
+    return document.querySelector(selector);
+}
+/**
+ * Returns the array of elements that match the given CSS selector.
+ * @param {string} selector - CSS query selector
+ * @returns {object[]} array of DOM objects matching the query.
+ */
+function qsa(selector) {
+    return document.querySelectorAll(selector);
+}
+/**
+ * Returns a new element with the given tag name.
+ * @param {string} tagName - HTML tag name for new DOM element.
+ * @returns {object} New DOM object for given HTML tag.
+ */
+function gen(tagName) {
+    return document.createElement(tagName);
 }

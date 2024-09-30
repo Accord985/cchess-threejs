@@ -5,7 +5,7 @@
 
 'use strict';
 import {CasualSandbox} from '../util/compiled/AbstractGame.js';
-import {DumbCChess} from '../util/compiled/cchess.js';
+import {DumbCChess, FlatCChess} from '../util/compiled/cchess.js';
 
 (function() {
   window.addEventListener('load', init);
@@ -16,7 +16,7 @@ import {DumbCChess} from '../util/compiled/cchess.js';
 
   async function init() {
     let game = await CasualSandbox.initialize();
-    let cchess = new DumbCChess(game);
+    let cchess = new FlatCChess(game);
     id('game-container').appendChild(cchess.getGameElement());
   }
 })();
