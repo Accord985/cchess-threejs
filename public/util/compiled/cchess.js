@@ -144,6 +144,14 @@ export class DumbCChess extends CChess {
         this.displayFinish(this._game.getWinner());
     }
 }
+// rank=row, file=column. rank goes from 10 to 1 (top->bottom),
+//  file goes from 9 to 1 (left->right)
+// TODO: now use row goes from 10 to 1 (top->bottom),
+// file goes from A to I (left->right)
+// type Coord = {
+//   rank: number,
+//   file: number
+// };
 // need to be paired with flatCChess.css
 export class FlatCChess extends CChess {
     constructor(game) {
@@ -154,26 +162,26 @@ export class FlatCChess extends CChess {
         this._ringMark = null;
     }
     // <section>
-    //   <div></div>x90, with id square{rank}-{file}
+    //   <div></div>x90, with id square-{row}{col}
     //   <section id="pieces">
     //     add elements based on layout like this:
-    //     <div class="team-1 file-1 rank-4">兵</div>
+    //     <div class="team-1 row-07 col-I">兵</div>
     //   </section>
     // </section>
     _buildGameElement() {
         let result = gen('section');
         result.id = 'board';
         result.translate = false;
-        // rank: 10th=0-8; 9th=9-17
-        // file: 1=8,17,...; 2=7,16,...
+        // row: 10th=0-8; 9th=9-17
+        // col: 65/A=0,9,...; 66/B=1,10,...
         for (let i = 0; i < 90; i++) {
             let currSquare = gen('div');
-            let rank = 10 - Math.floor(i / 9);
-            let file = 9 - i % 9;
-            currSquare.id = `square${rank}-${file}`;
+            let row = 10 - Math.floor(i / 9);
+            let col = String.fromCharCode(65 + i % 9);
+            currSquare.id = `square-${(row === 10) ? '' : '0'}${row}${col}`;
             currSquare.addEventListener('click', (evt) => {
                 if (!(evt.target instanceof HTMLDivElement)) {
-                    throw new Error("How is this not a div??");
+                    throw new Error("The square clicked needs to be a div element");
                 }
                 this.selectSquare(evt.target);
             });
@@ -195,12 +203,12 @@ export class FlatCChess extends CChess {
                     currPiece.textContent = (team === 1) ?
                         redTypes.charAt(type) : blackTypes.charAt(type);
                     currPiece.classList.add(`team-${team}`);
-                    currPiece.classList.add(`file-${9 - j}`);
-                    currPiece.classList.add(`rank-${10 - i}`);
+                    currPiece.classList.add(`col-${String.fromCharCode(65 + j)}`);
+                    currPiece.classList.add(`row-${(i === 0) ? '' : '0'}${10 - i}`);
                     currPiece.addEventListener('click', (evt) => {
                         // evt.target is the target of the event (selected piece)
                         if (!(evt.target instanceof HTMLDivElement)) {
-                            throw new Error("How did you click this?");
+                            throw new Error("The piece clicked needs to be a div element");
                         }
                         this.selectPiece(evt.target);
                     });
@@ -250,19 +258,21 @@ export class FlatCChess extends CChess {
         if (this._selected) {
             if (this.isRival(target, this._selected)) {
                 // attempt to move and update according to status
-                let startCoord = this.getCoordinates(this._selected);
-                let srow = ((startCoord.rank < 10) ? '0' : '') + startCoord.rank;
-                let scol = 'ABCDEFGHI'.charAt(9 - startCoord.file);
-                let endCoord = this.getCoordinates(target);
-                let erow = ((endCoord.rank < 10) ? '0' : '') + endCoord.rank;
-                let ecol = 'ABCDEFGHI'.charAt(9 - endCoord.file);
-                let moveStr = srow + scol + erow + ecol; // TODO: change format of move
+                let startPos = this.getPos(this._selected);
+                let endPos = this.getPos(target);
+                let moveStr = startPos + endPos;
+                let status = this._game.makeMove(moveStr);
                 // TODO: NOW RETURN interpreted moveStr
-                // let targetCoord = this.getCoordinates(target);
-                // target.classList.add('captured');
-                // target.classList.replace('file-'+targetCoord.file, 'file-0');
-                // target.classList.replace('rank-'+targetCoord.rank, 'rank-0');
-                // this.moveSelected(targetCoord);
+                if (status === -1) {
+                    console.log('fail to move ' + moveStr);
+                }
+                else {
+                    let targetPos = this.getPos(target);
+                    target.classList.add('captured');
+                    target.classList.replace('col-' + targetPos.substring(2), 'col-X');
+                    target.classList.replace('row-' + targetPos.substring(0, 2), 'row-00');
+                    this.moveSelected(targetPos);
+                }
             }
             else if (target !== this._selected) {
                 // there is selected & not rival:
@@ -282,48 +292,55 @@ export class FlatCChess extends CChess {
         }
     }
     selectSquare(target) {
-        let coordStr = target.id.substring(6);
-        let squareCoord = {
-            rank: parseInt(coordStr.substring(0, coordStr.indexOf('-'))),
-            file: parseInt(coordStr.substring(coordStr.indexOf('-') + 1))
-        };
-        let pieceInPos = qs(`#pieces > .rank-${squareCoord.rank}.file-${squareCoord.file}`);
+        let squarePos = target.id.substring(7);
+        let pieceInPos = qs(`#pieces > .rank-${squarePos.substring(0, 2)}.file-${squarePos.substring(2)}`);
         if (!pieceInPos) {
             if (qs('.selected')) {
-                this.moveSelected(squareCoord);
+                let selectedPos = this.getPos(qs('.selected'));
+                let status = this._game.makeMove(selectedPos + squarePos);
+                if (status === -1) {
+                    console.log('failed to move');
+                }
+                else {
+                    this.moveSelected(squarePos);
+                }
             }
         }
         else {
             this.selectPiece(pieceInPos);
         }
     }
-    getCoordinates(piece) {
-        let fl = 0; // file
-        let rk = 0; // rank
+    getPos(piece) {
+        let row = ''; // file
+        let col = ''; // rank
         for (let i = 0; i < piece.classList.length; i++) {
-            if (piece.classList[i].startsWith('file-')) {
-                fl = parseInt(piece.classList[i].substring(5));
+            let currName = piece.classList[i];
+            if (currName.startsWith('col-')) {
+                col = currName.charAt(4);
             }
-            else if (piece.classList[i].startsWith('rank-')) {
-                rk = parseInt(piece.classList[i].substring(5));
+            else if (currName.startsWith('row-')) {
+                row = currName.substring(4);
             }
         }
-        if (fl <= 0 || rk <= 0 || fl > 9 || rk > 10) {
+        let rowNum = parseInt(row);
+        if (rowNum * (rowNum - 10) > 0 || !'ABCDEFGHI'.includes(col)) {
             throw new Error('Illegal piece position');
         }
-        let coord = { rank: rk, file: fl };
+        let coord = row + col;
         return coord;
     }
+    // remove this useless method
     moveSelected(endPos) {
         if (!this._selected) {
             throw new Error("No selected piece to move");
         }
-        let selectedPos = this.getCoordinates(this._selected);
+        let selectedPos = this.getPos(this._selected);
         this.makeMove(selectedPos, endPos);
+        this._selected = null;
     }
     // right now startPos must contain a piece
     makeMove(startPos, endPos) {
-        let startPiece = qs(`#pieces > .rank-${startPos.rank}.file-${startPos.file}`);
+        let startPiece = qs(`#pieces > .row-${startPos.substring(0, 2)}.col-${startPos.charAt(2)}`);
         if (!startPiece) {
             throw new Error("No piece to move");
         }
@@ -335,14 +352,13 @@ export class FlatCChess extends CChess {
         if (this._ringMark) {
             this._ringMark.classList.remove("markRing");
         }
-        startPiece.classList.replace('file-' + startPos.file, 'file-' + endPos.file);
-        startPiece.classList.replace('rank-' + startPos.rank, 'rank-' + endPos.rank);
-        this._selected = null; // TODO: why selected in here?
-        this._dotMark = id(`square${startPos.rank}-${startPos.file}`);
+        startPiece.classList.replace('col-' + startPos.substring(2), 'col-' + endPos.substring(2));
+        startPiece.classList.replace('row-' + startPos.substring(0, 2), 'row-' + endPos.substring(0, 2));
+        this._dotMark = id(`square-${startPos}`);
         this._dotMark.classList.add("markDot");
         setTimeout(() => {
             startPiece.classList.remove('selected');
-            this._ringMark = id(`square${endPos.rank}-${endPos.file}`);
+            this._ringMark = id(`square-${endPos}`);
             this._ringMark.classList.add("markRing");
         }, 200);
     }

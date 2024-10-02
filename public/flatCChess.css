@@ -54,26 +54,26 @@
 #pieces > div.team-2 {color: black;}
 #pieces > div.team-3 {color: green;}
 
-#board div.rank-1 {top: 450px;}
-#board div.rank-2 {top: 400px;}
-#board div.rank-3 {top: 350px;}
-#board div.rank-4 {top: 300px;}
-#board div.rank-5 {top: 250px;}
-#board div.rank-6 {top: 200px;}
-#board div.rank-7 {top: 150px;}
-#board div.rank-8 {top: 100px;}
-#board div.rank-9 {top: 50px;}
-#board div.rank-10 {top: 0px;}
+#board div.row-01 {top: 450px;}
+#board div.row-02 {top: 400px;}
+#board div.row-03 {top: 350px;}
+#board div.row-04 {top: 300px;}
+#board div.row-05 {top: 250px;}
+#board div.row-06 {top: 200px;}
+#board div.row-07 {top: 150px;}
+#board div.row-08 {top: 100px;}
+#board div.row-09 {top: 50px;}
+#board div.row-10 {top: 0px;}
 
-#board div.file-9 {left: 0px;}
-#board div.file-8 {left: 50px;}
-#board div.file-7 {left: 100px;}
-#board div.file-6 {left: 150px;}
-#board div.file-5 {left: 200px;}
-#board div.file-4 {left: 250px;}
-#board div.file-3 {left: 300px;}
-#board div.file-2 {left: 350px;}
-#board div.file-1 {left: 400px;}
+#board div.col-A {left: 0px;}
+#board div.col-B {left: 50px;}
+#board div.col-C {left: 100px;}
+#board div.col-D {left: 150px;}
+#board div.col-E {left: 200px;}
+#board div.col-F {left: 250px;}
+#board div.col-G {left: 300px;}
+#board div.col-H {left: 350px;}
+#board div.col-I {left: 400px;}
 
 #pieces > div.selected {
   filter: drop-shadow(15px 15px 9px rgba(0,0,0,0.4));
