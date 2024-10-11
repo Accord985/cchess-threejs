@@ -18,5 +18,6 @@ import {DumbCChess, FlatCChess} from '../util/compiled/cchess.js';
     let game = await CasualSandbox.initialize();
     let cchess = new FlatCChess(game);
     id('game-container').appendChild(cchess.getGameElement());
+    cchess.displayCheck();
   }
 })();

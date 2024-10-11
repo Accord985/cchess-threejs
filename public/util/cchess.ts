@@ -224,25 +224,30 @@ export class FlatCChess extends CChess {
         if (!(evt.target instanceof HTMLDivElement)) {
           throw new Error("The square clicked needs to be a div element");
         }
+        // TODO: operateBoard();
         this.selectSquare(evt.target);
       });
       result.append(currSquare);
     }
+    let pieces = this._createPieces();
+    result.appendChild(pieces);
+    return result;
+  }
+
+  // add elements based on layout
+  private _createPieces(): HTMLElement {
     let pieces = gen('section');
     pieces.id = 'pieces';
-    // add elements based on layout
     let layout: number[][] = this._game.getLayout();
-    let redTypes = '車馬炮仕相兵帥';
-    let blackTypes = '車馬炮士象卒將';
+    let names = ['車馬炮仕相兵帥', '車馬炮士象卒將'];  // red, black
     for (let i = 0; i < 10; i++) {
       for (let j = 0; j < 9; j++) {
         let pieceNum = layout[i][j];
         if (pieceNum !== 0) {
           let team = Math.floor(pieceNum / 10);
-          let type = pieceNum % 10 - 1;
+          let type = pieceNum % 10;
           let currPiece = gen('div');
-          currPiece.textContent = (team === 1) ?
-              redTypes.charAt(type) : blackTypes.charAt(type);
+          currPiece.textContent = names[team - 1].charAt(type - 1);
           currPiece.classList.add(`team-${team}`);
           currPiece.classList.add(`col-${String.fromCharCode(65 + j)}`);
           currPiece.classList.add(`row-${(i === 0) ? '' : '0'}${10 - i}`);
@@ -251,14 +256,14 @@ export class FlatCChess extends CChess {
             if (!(evt.target instanceof HTMLDivElement)) {
               throw new Error("The piece clicked needs to be a div element");
             }
+            // TODO: operateBoard();
             this.selectPiece(evt.target);
           });
           pieces.appendChild(currPiece);
         }
       }
     }
-    result.appendChild(pieces);
-    return result;
+    return pieces;
   }
 
   interpret(): string {
@@ -266,7 +271,7 @@ export class FlatCChess extends CChess {
   }
 
   update(status: number): void {
-    console.log('updating the board after the move')
+    console.log('updating the board after the move');
   }
 
   recallMove(): void {
@@ -293,23 +298,39 @@ export class FlatCChess extends CChess {
     console.log('wrapping up... Remove all control')
   }
 
-  displayMoveFail(): void {
-
+  displayMoveFail(piece: HTMLDivElement, wrongPos: string): void {
+    piece.classList.add('flashing');
+    let piecePos = this.getPos(piece);
+    let pieceRow = piecePos.substring(0,2);
+    let pieceCol = piecePos.substring(2);
+    let wrongRow = wrongPos.substring(0,2);
+    let wrongCol = wrongPos.substring(2);
+    piece.classList.replace('row-'+pieceRow, 'row-'+wrongRow);
+    piece.classList.replace('col-'+pieceCol, 'col-'+wrongCol);
+    setTimeout(() => {
+      piece.classList.replace('row-'+wrongRow, 'row-'+pieceRow);
+      piece.classList.replace('col-'+wrongCol, 'col-'+pieceCol);
+      piece.classList.remove('flashing');
+    }, 200);
   }
 
-  isRival(pieceA: HTMLDivElement, pieceB: HTMLDivElement): boolean {
-    if ((!pieceA.classList.contains("team-1") && !pieceA.classList.contains("team-2")) ||
-        (!pieceB.classList.contains("team-1") && !pieceB.classList.contains("team-2"))) {
-      throw new Error("One of the pieces has no teams. Cannot determine rival status.");
+  getTeam(piece: HTMLDivElement): number {
+    for (let i = 0; i < piece.classList.length; i++) {
+      let currName = piece.classList[i];
+      if (currName.startsWith('team-')) {
+        let team = parseInt(currName.charAt(5));
+        if (isNaN(team)) {
+          throw new Error('Unable to recognize the piece\'s team: ' + currName);
+        }
+        return parseInt(currName.charAt(5));
+      }
     }
-    let aInOne: boolean = pieceA.classList.contains("team-1");
-    let bInOne: boolean = pieceB.classList.contains("team-1");
-    return (aInOne && !bInOne) || (!aInOne && bInOne);
+    throw new Error('The piece has no teams-related class on it');
   }
 
   selectPiece(target: HTMLDivElement) {
     if (this._selected) {
-      if (this.isRival(target, this._selected)) {
+      if (this.getTeam(target) !== this.getTeam(this._selected)) {  // are rival
         // attempt to move and update according to status
         let startPos = this.getPos(this._selected);
         let endPos = this.getPos(target);
@@ -317,13 +338,16 @@ export class FlatCChess extends CChess {
         let status = this._game.makeMove(moveStr);
         // TODO: NOW RETURN interpreted moveStr
         if (status === -1) {
+          this.displayMoveFail(this._selected, endPos);
           console.log('fail to move '+moveStr);
         } else {
           let targetPos = this.getPos(target);
           target.classList.add('captured');
           target.classList.replace('col-'+targetPos.substring(2), 'col-X');
           target.classList.replace('row-'+targetPos.substring(0,2), 'row-00');
-          this.moveSelected(targetPos);
+          let selectedPos = this.getPos(this._selected);
+          this.makeMove(selectedPos, endPos);
+          this._selected = null;
         }
       } else if (target !== this._selected) {
         // there is selected & not rival:
@@ -345,13 +369,16 @@ export class FlatCChess extends CChess {
     let squarePos: string = target.id.substring(7);
     let pieceInPos = qs(`#pieces > .rank-${squarePos.substring(0,2)}.file-${squarePos.substring(2)}`) as HTMLDivElement;
     if (!pieceInPos) {
-      if (qs('.selected')) {
-        let selectedPos = this.getPos(qs('.selected') as HTMLDivElement);
+      if (this._selected) {
+        let selectedPos = this.getPos(this._selected);
         let status = this._game.makeMove(selectedPos+squarePos);
         if (status === -1) {
           console.log(`failed to move ${selectedPos + squarePos}`);
+          this.displayMoveFail(this._selected, squarePos);
         } else {
-          this.moveSelected(squarePos);
+          let selectedPos = this.getPos(this._selected);
+          this.makeMove(selectedPos, squarePos);
+          this._selected = null;
         }
       }
     } else {
@@ -378,16 +405,6 @@ export class FlatCChess extends CChess {
     return coord;
   }
 
-  // remove this useless method
-  moveSelected(endPos: string) {
-    if (!this._selected) {
-      throw new Error("No selected piece to move");
-    }
-    let selectedPos = this.getPos(this._selected);
-    this.makeMove(selectedPos, endPos);
-    this._selected = null;
-  }
-
   // right now startPos must contain a piece
   makeMove(startPos: string, endPos: string) {
     let startPiece = qs(`#pieces > .row-${startPos.substring(0,2)}.col-${startPos.charAt(2)}`);
@@ -411,7 +428,7 @@ export class FlatCChess extends CChess {
       startPiece.classList.remove('selected');
       this._ringMark = id(`square-${endPos}`) as HTMLDivElement;
       this._ringMark.classList.add("markRing");
-    }, 200);
+    }, 100);
   }
 }
 

@@ -189,6 +189,11 @@ export class FlatCChess extends CChess {
         }
         let pieces = gen('section');
         pieces.id = 'pieces';
+        this._addPieces(pieces);
+        result.appendChild(pieces);
+        return result;
+    }
+    _addPieces(pieces) {
         // add elements based on layout
         let layout = this._game.getLayout();
         let redTypes = '車馬炮仕相兵帥';
@@ -216,8 +221,6 @@ export class FlatCChess extends CChess {
                 }
             }
         }
-        result.appendChild(pieces);
-        return result;
     }
     interpret() {
         return "";
@@ -243,20 +246,37 @@ export class FlatCChess extends CChess {
     displayFinish(winner) {
         console.log('wrapping up... Remove all control');
     }
-    displayMoveFail() {
+    displayMoveFail(piece, wrongPos) {
+        piece.classList.add('flashing');
+        let piecePos = this.getPos(piece);
+        let pieceRow = piecePos.substring(0, 2);
+        let pieceCol = piecePos.substring(2);
+        let wrongRow = wrongPos.substring(0, 2);
+        let wrongCol = wrongPos.substring(2);
+        piece.classList.replace('row-' + pieceRow, 'row-' + wrongRow);
+        piece.classList.replace('col-' + pieceCol, 'col-' + wrongCol);
+        setTimeout(() => {
+            piece.classList.replace('row-' + wrongRow, 'row-' + pieceRow);
+            piece.classList.replace('col-' + wrongCol, 'col-' + pieceCol);
+            piece.classList.remove('flashing');
+        }, 200);
     }
-    isRival(pieceA, pieceB) {
-        if ((!pieceA.classList.contains("team-1") && !pieceA.classList.contains("team-2")) ||
-            (!pieceB.classList.contains("team-1") && !pieceB.classList.contains("team-2"))) {
-            throw new Error("One of the pieces has no teams. Cannot determine rival status.");
+    getTeam(piece) {
+        for (let i = 0; i < piece.classList.length; i++) {
+            let currName = piece.classList[i];
+            if (currName.startsWith('team-')) {
+                let team = parseInt(currName.charAt(5));
+                if (isNaN(team)) {
+                    throw new Error('Unable to recognize the piece\'s team: ' + currName);
+                }
+                return parseInt(currName.charAt(5));
+            }
         }
-        let aInOne = pieceA.classList.contains("team-1");
-        let bInOne = pieceB.classList.contains("team-1");
-        return (aInOne && !bInOne) || (!aInOne && bInOne);
+        throw new Error('The piece has no teams-related class on it');
     }
     selectPiece(target) {
         if (this._selected) {
-            if (this.isRival(target, this._selected)) {
+            if (this.getTeam(target) !== this.getTeam(this._selected)) { // are rival
                 // attempt to move and update according to status
                 let startPos = this.getPos(this._selected);
                 let endPos = this.getPos(target);
@@ -264,6 +284,7 @@ export class FlatCChess extends CChess {
                 let status = this._game.makeMove(moveStr);
                 // TODO: NOW RETURN interpreted moveStr
                 if (status === -1) {
+                    this.displayMoveFail(this._selected, endPos);
                     console.log('fail to move ' + moveStr);
                 }
                 else {
@@ -271,7 +292,9 @@ export class FlatCChess extends CChess {
                     target.classList.add('captured');
                     target.classList.replace('col-' + targetPos.substring(2), 'col-X');
                     target.classList.replace('row-' + targetPos.substring(0, 2), 'row-00');
-                    this.moveSelected(targetPos);
+                    let selectedPos = this.getPos(this._selected);
+                    this.makeMove(selectedPos, endPos);
+                    this._selected = null;
                 }
             }
             else if (target !== this._selected) {
@@ -295,14 +318,17 @@ export class FlatCChess extends CChess {
         let squarePos = target.id.substring(7);
         let pieceInPos = qs(`#pieces > .rank-${squarePos.substring(0, 2)}.file-${squarePos.substring(2)}`);
         if (!pieceInPos) {
-            if (qs('.selected')) {
-                let selectedPos = this.getPos(qs('.selected'));
+            if (this._selected) {
+                let selectedPos = this.getPos(this._selected);
                 let status = this._game.makeMove(selectedPos + squarePos);
                 if (status === -1) {
-                    console.log('failed to move');
+                    console.log(`failed to move ${selectedPos + squarePos}`);
+                    this.displayMoveFail(this._selected, squarePos);
                 }
                 else {
-                    this.moveSelected(squarePos);
+                    let selectedPos = this.getPos(this._selected);
+                    this.makeMove(selectedPos, squarePos);
+                    this._selected = null;
                 }
             }
         }
@@ -329,15 +355,6 @@ export class FlatCChess extends CChess {
         let coord = row + col;
         return coord;
     }
-    // remove this useless method
-    moveSelected(endPos) {
-        if (!this._selected) {
-            throw new Error("No selected piece to move");
-        }
-        let selectedPos = this.getPos(this._selected);
-        this.makeMove(selectedPos, endPos);
-        this._selected = null;
-    }
     // right now startPos must contain a piece
     makeMove(startPos, endPos) {
         let startPiece = qs(`#pieces > .row-${startPos.substring(0, 2)}.col-${startPos.charAt(2)}`);
@@ -360,7 +377,7 @@ export class FlatCChess extends CChess {
             startPiece.classList.remove('selected');
             this._ringMark = id(`square-${endPos}`);
             this._ringMark.classList.add("markRing");
-        }, 200);
+        }, 100);
     }
 }
 /**

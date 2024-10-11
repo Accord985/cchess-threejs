@@ -38,10 +38,16 @@
   position: absolute;
   text-align: center;
   transform: scale(0.9);
-  transition: 0.2s linear;
+  transition:
+    top 0.2s, left 0.2s,
+    filter 0.3s, transform 0.3s;
   filter: drop-shadow(4px 4px 7px rgba(0,0,0,0.6));
   cursor: pointer;
   user-select: none;
+}
+
+#pieces > div.flashing {
+  transition: top 0.05s ease-in-out, left 0.05s ease-in-out;
 }
 
 #pieces > div {
@@ -77,8 +83,9 @@
 
 #pieces > div.selected {
   filter: drop-shadow(15px 15px 9px rgba(0,0,0,0.4));
-  transform: scale(0.95) rotateX(20deg);
+  transform: scale(0.95) rotateX(20deg) translateY(-7px);
   z-index: 2;
+  box-shadow: 0px 0px 10px white;
 }
 
 #pieces > div.captured, .hidden {
