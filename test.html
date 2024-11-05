@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="flatCChess.css">
+  </head>
+  <body>
+    <section id="game-container">
+      <section id="board" translate="no">
+        <section id="effects">
+          <section id="capture">
+            <img src="./pic/calligraphy/圆.svg">
+            <img src="./pic/calligraphy/吃.svg">
+          </section>
+          <section id="check">
+            <img src="./pic/calligraphy/点.svg">
+            <img src="./pic/calligraphy/将.svg">
+            <img src="./pic/calligraphy/军.svg">
+          </section>
+          <section id="checkmate">
+            <img src="./pic/calligraphy/泼墨.svg">
+            <img src="./pic/calligraphy/绝.svg">
+            <img src="./pic/calligraphy/杀.svg">
+          </section>
+        </section>
+      </section>
+    </section>
+    <button id="btn-capture">capture</button>
+    <button id="btn-check">check</button>
+    <button id="btn-checkmate">checkmate</button>
+    <script>
+      document.getElementById('btn-capture').addEventListener('click', ()=> {
+        document.getElementById('capture').classList.toggle('active');
+      });
+      document.getElementById('btn-check').addEventListener('click', ()=> {
+        document.getElementById('check').classList.toggle('active');
+      });
+      document.getElementById('btn-checkmate').addEventListener('click', ()=> {
+        document.getElementById('checkmate').classList.toggle('active');
+      });
+    </script>
+  </body>
+</html>

@@ -183,30 +183,29 @@ export class FlatCChess extends CChess {
                 if (!(evt.target instanceof HTMLDivElement)) {
                     throw new Error("The square clicked needs to be a div element");
                 }
+                // TODO: operateBoard();
                 this.selectSquare(evt.target);
             });
             result.append(currSquare);
         }
-        let pieces = gen('section');
-        pieces.id = 'pieces';
-        this._addPieces(pieces);
+        let pieces = this._createPieces();
         result.appendChild(pieces);
         return result;
     }
-    _addPieces(pieces) {
-        // add elements based on layout
+    // add elements based on layout
+    _createPieces() {
+        let pieces = gen('section');
+        pieces.id = 'pieces';
         let layout = this._game.getLayout();
-        let redTypes = '車馬炮仕相兵帥';
-        let blackTypes = '車馬炮士象卒將';
+        let names = ['車馬炮仕相兵帥', '車馬炮士象卒將']; // red, black
         for (let i = 0; i < 10; i++) {
             for (let j = 0; j < 9; j++) {
                 let pieceNum = layout[i][j];
                 if (pieceNum !== 0) {
                     let team = Math.floor(pieceNum / 10);
-                    let type = pieceNum % 10 - 1;
+                    let type = pieceNum % 10;
                     let currPiece = gen('div');
-                    currPiece.textContent = (team === 1) ?
-                        redTypes.charAt(type) : blackTypes.charAt(type);
+                    currPiece.textContent = names[team - 1].charAt(type - 1);
                     currPiece.classList.add(`team-${team}`);
                     currPiece.classList.add(`col-${String.fromCharCode(65 + j)}`);
                     currPiece.classList.add(`row-${(i === 0) ? '' : '0'}${10 - i}`);
@@ -215,12 +214,14 @@ export class FlatCChess extends CChess {
                         if (!(evt.target instanceof HTMLDivElement)) {
                             throw new Error("The piece clicked needs to be a div element");
                         }
+                        // TODO: operateBoard();
                         this.selectPiece(evt.target);
                     });
                     pieces.appendChild(currPiece);
                 }
             }
         }
+        return pieces;
     }
     interpret() {
         return "";

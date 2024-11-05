@@ -46,7 +46,7 @@ import Stats from 'three/addons/libs/stats.module.js';
   let myTeam = 1;
 
   async function init() {
-    if (!WebGL.isWebGLAvailable()) {
+    if (!WebGL.isWebGL2Available()) {
       addErrorMsg();
       throw new Error('WebGL not supported');
     }
@@ -186,7 +186,7 @@ import Stats from 'three/addons/libs/stats.module.js';
     const fontLoader = new FontLoader();
     try {
       const font = await fontLoader.loadAsync('util/fonts/fz-ht-kai.json');
-      const settings = {font:font, size:3,height:0, bevelEnabled:true,bevelThickness:0,bevelSize:0.05};
+      const settings = {font:font, size:3,depth:0, bevelEnabled:true,bevelThickness:0,bevelSize:0.05};
       const leftText = generateTextAt('楚河', settings, -10, 0);
       const rightText = generateTextAt('汉界', settings, 10, 0);
       textGroup.add(leftText);
@@ -196,7 +196,7 @@ import Stats from 'three/addons/libs/stats.module.js';
     }
     try {
       const font = await fontLoader.loadAsync('util/fonts/heiti.json');
-      const settings = {font:font, size: 1.3, height:0, bevelEnabled: true, bevelThickness:0, bevelSize: 0.05};
+      const settings = {font:font, size: 1.3, depth:0, bevelEnabled: true, bevelThickness:0, bevelSize: 0.05};
       const NUMS = "一二三四五六七八九";
       for (let i = 0; i < 9; i++) {
         const number = generateTextAt(NUMS[8-i], settings, 5*i-20, -25.5);

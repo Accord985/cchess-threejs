@@ -249,7 +249,7 @@ export class Piece {
       const settings = {
         font:font,
         size: 16,
-        height: 0,
+        depth: 0,
         bevelEnabled: true,
         bevelThickness: (Piece.#ENGRAVE === 0) ? 0 : 0.4,
         bevelSize: 0.4,

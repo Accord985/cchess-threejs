@@ -1,0 +1,299 @@
+#board > section, #mark-1, #mark-2 {
+  position: absolute;
+}
+
+#board {
+  /* credits given to www.postermywall.com/ for the wooden background */
+  width: 450px;
+  height: 500px;
+  background: center/450px 500px no-repeat url('./pic/flatCChess/board.svg'),
+      center/contain url("./pic/board-lighting.svg"),
+      center/contain url("./pic/whiteoak.jpg");
+  padding: 30px 27px;
+  border-radius: 1%;
+  box-shadow: 7px 7px 5px burlywood;
+  border: 3px ridge burlywood;
+  display: grid;
+  grid: repeat(10, 50px) / repeat(9, 50px);
+}
+
+#board > div {
+  width: 50px;
+  height: 50px;
+}
+
+#board > div:hover {
+  box-shadow: inset 5px 5px rgb(0, 128, 47), inset -5px -5px rgb(0, 128, 47);
+}
+
+#board > div.not-allowed:hover {
+  box-shadow: inset 5px 5px rgb(238, 0, 128), inset -5px -5px rgb(238, 0, 128);
+}
+
+#pieces > div {
+  width: 50px;
+  height: 50px;
+  line-height: 44.7px;
+  font-size: 35px;
+  background: center / contain url("./pic/whiteoak.jpg");
+  border-radius: 50%;
+  border: 3px chocolate solid;
+  box-sizing: border-box;
+  position: absolute;
+  text-align: center;
+  transform: scale(0.9);
+  transition:
+    top 0.2s, left 0.2s,
+    filter 0.3s, transform 0.3s;
+  filter: drop-shadow(4px 4px 7px rgba(0,0,0,0.6));
+  cursor: pointer;
+  user-select: none;
+}
+
+#pieces > div.flashing {
+  transition: top 0.05s ease-in-out, left 0.05s ease-in-out;
+}
+
+#pieces > div {
+  /* font-family: 方正行楷_GBK; */
+  font-family: 方正刘炳森隶书 简繁;
+  /* font-family: 文鼎超颜楷简繁; */
+}
+
+#pieces > div.team-1 {color: red;}
+#pieces > div.team-2 {color: black;}
+#pieces > div.team-3 {color: green;}
+
+#board div.row-01 {top: 450px;}
+#board div.row-02 {top: 400px;}
+#board div.row-03 {top: 350px;}
+#board div.row-04 {top: 300px;}
+#board div.row-05 {top: 250px;}
+#board div.row-06 {top: 200px;}
+#board div.row-07 {top: 150px;}
+#board div.row-08 {top: 100px;}
+#board div.row-09 {top: 50px;}
+#board div.row-10 {top: 0px;}
+
+#board div.col-A {left: 0px;}
+#board div.col-B {left: 50px;}
+#board div.col-C {left: 100px;}
+#board div.col-D {left: 150px;}
+#board div.col-E {left: 200px;}
+#board div.col-F {left: 250px;}
+#board div.col-G {left: 300px;}
+#board div.col-H {left: 350px;}
+#board div.col-I {left: 400px;}
+
+#pieces > div.selected {
+  filter: drop-shadow(15px 15px 9px rgba(0,0,0,0.4));
+  transform: scale(0.95) rotateX(20deg) translateY(-7px);
+  z-index: 2;
+  box-shadow: 0px 0px 10px white;
+}
+
+#pieces > div.captured, .hidden {
+  display: none;
+}
+
+#board > div.markDot {
+  background: center/50% url("./pic/flatCChess/mark-dot.svg") no-repeat;
+}
+
+#board > div.markRing {
+  background: center/100% url("./pic/flatCChess/mark-piece.svg") no-repeat;
+}
+
+/* TODO: when the piece should not be moved, set cursor to not-allowed */
+/* #pieces:not(:has(.selected)) > div {
+  cursor: not-allowed;
+} */
+
+#effects img {
+  display: none;
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  left: 169px;
+  top: 194px;
+}
+
+#effects section.active img {
+  display: block;
+}
+
+#capture.active img:nth-child(1) {
+  animation: 1s diffuse-normal ease-out;
+}
+
+#capture.active img:nth-child(2) {
+  animation: 1s capture ease-out;
+}
+
+#check.active img:nth-child(1) {
+  animation: 1s diffuse-normal ease-out;
+}
+
+#check.active img:nth-child(3) {
+  animation: 1s check-right ease-out;
+}
+
+#check.active img:nth-child(2) {
+  animation: 1s check-left ease-out;
+}
+
+#checkmate.active img:nth-child(1) {
+  animation: 2s diffuse-large ease-out;
+}
+
+#checkmate.active img:nth-child(3) {
+  animation: 2s checkmate-right ease-out;
+}
+
+#checkmate.active img:nth-child(2) {
+  animation: 2s checkmate-left ease-out;
+}
+
+@keyframes capture {
+  0% {
+    transform: scale(4);
+    filter: blur(5px);
+  }
+  10% {
+    transform: scale(0.8);
+    filter: blur(0);
+  }
+  70% {
+    transform: scale(0.8);
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+    filter: blur(15px);
+  }
+}
+
+@keyframes diffuse-normal {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.3;
+    filter: blur(10px);
+  }
+  10%, 70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  20%, 70% {
+    filter: none;
+  }
+  100% {
+    transform: scale(1);
+    filter: blur(10px);
+    opacity: 0;
+  }
+}
+
+@keyframes check-right {
+  0% {
+    transform: translate(24px, 24px) scale(3);
+    filter: blur(5px);
+  }
+  10% {
+    transform: translate(24px, 24px) scale(0.6);
+    filter: blur(0);
+  }
+  70% {
+    transform: translate(24px, 24px) scale(0.6);
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    transform: translate(24px, 24px) scale(0.6);
+    opacity: 0;
+    filter: blur(15px);
+  }
+}
+
+@keyframes check-left {
+  0% {
+    transform: translate(-24px, -24px) scale(3);
+    filter: blur(5px);
+  }
+  10% {
+    transform: translate(-24px, -24px) scale(0.6);
+    filter: blur(0);
+  }
+  70% {
+    transform: translate(-24px, -24px) scale(0.6);
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    transform: translate(-24px, -24px) scale(0.6);
+    opacity: 0;
+    filter: blur(15px);
+  }
+}
+
+@keyframes diffuse-large {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.3;
+    filter: blur(10px);
+  }
+  10%, 70% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  30% {
+    filter: none;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes checkmate-left {
+  0% {
+    transform: translate(-28px, -12px) scale(3);
+    filter: blur(5px);
+  }
+  10% {
+    transform: translate(-28px, -12px) scale(0.6);
+    filter: blur(0);
+  }
+  70% {
+    transform: translate(-34px, -12px) scale(0.6);
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    transform: translate(-37px, -12px) scale(1);
+    opacity: 0;
+    filter: blur(15px);
+  }
+}
+
+@keyframes checkmate-right {
+  0% {
+    transform: translate(28px, 12px) scale(3);
+    filter: blur(5px);
+  }
+  10% {
+    transform: translate(28px, 12px) scale(0.6);
+    filter: blur(0);
+  }
+  70% {
+    transform: translate(34px, 12px) scale(0.6);
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    transform: translate(37px, 12px) scale(1);
+    opacity: 0;
+    filter: blur(15px);
+  }
+}
