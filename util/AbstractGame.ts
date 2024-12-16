@@ -41,10 +41,13 @@ export interface AbstractGame {
  * AbstractGame(base) ==> [rules] Official; Casual; DoubleStep; ThreePlayer
  *                        [modes] Sandbox; Record; WithAI; WithPlayer
  *
- * Use this command to compile all the code into js file in compiled folder: (use git bash console)
+ * [Deprecated] Use this command to compile all the code into js file in compiled folder: (use git bash console)
  *    rm public/util/compiled/* ; tsc public/util/*.ts --target es2015 --outDir public/util/compiled/
  * (deletes all file in compiled folder and compiles js from all ts files)
  * --target es2015 ensures the code exports normally
+ * Vite manages the compilation of ts files for me. However, it does not perform type check. Thus, I
+ *   will need to run "tsc --noEmit" to see if the compiler complains. This command is included in
+ *   package.json so I just need to run "npm run dev"
  *
  * AbstractGame:
  * fields: layout, currentPlayer, lastMove, lastCaptured, winner, static types

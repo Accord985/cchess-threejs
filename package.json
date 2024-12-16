@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "express": "^4.21.1",
+    "@types/three": "^0.170.0",
     "react": "^18.3.1",
     "three": "^0.170.0",
     "typescript": "^5.4.3",
@@ -12,8 +12,8 @@
   "main": "app.js",
   "scripts": {
     "test": "nodemon",
-    "dev": "vite --port 8000",
-    "build": "vite build",
+    "dev": "sh -c 'tsc --noEmit; vite --port 8000'",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "author": "",

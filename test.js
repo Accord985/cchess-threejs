@@ -4,8 +4,8 @@
  */
 
 'use strict';
-import {CasualSandbox} from '../util/compiled/AbstractGame.js';
-import {DumbCChess, FlatCChess} from '../util/compiled/cchess.js';
+import {CasualSandbox} from './util/AbstractGame.ts';
+import {DumbCChess, FlatCChess} from './util/cchess.ts';
 
 (function() {
   window.addEventListener('load', init);

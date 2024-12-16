@@ -3,20 +3,24 @@
  * This file defines the generation and behavior of a cchess piece given the piece's team and type.
  *  The piece has customizable attributes like engraving, fonts, and texture.
  *
+ * I need to install the typescript definitions for three.js:
+ *    npm install three @types/three
+ *
  * // TODO: also make a 'class' for the board (to store the positions & calculate legal moves)
  * // TODO: add AnimationClip, KeyframeTrack to the pieces (move)
  * // TODO: use clone() to improve efficiency. store the already produced piece ({1K:Mesh, 1G: Mesh, 1E: undefined, ...})
  * // TODO: use appearance manager to deal with font/segment/engrave/base.
  */
-
-'use strict';
 import * as THREE from 'three';
-import {FontLoader} from 'three/addons/loaders/FontLoader.js';
-import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
+import {FontLoader} from 'three/examples/jsm/loaders/FontLoader';
+import {TextGeometry} from 'three/examples/jsm/geometries/TextGeometry';
+
+type ChessType = "K" | "G" | "E" | "N" | "R" | "C" | "P" | "S";
+type ChessTeam = 0 | 1 | 2 | 3;
 
 export class Piece {
-  static #SEGMENTS = 32; // take this number of segments when dealing with circles in the model
-  static #CHARACTERS = {
+  private static SEGMENTS = 32; // take this number of segments when dealing with circles in the model
+  private static CHARACTERS = {
     'K':'帥將王', // King
     'G':'仕士侍', // Guard
     'E':'相象像', // Elephant
@@ -31,33 +35,33 @@ export class Piece {
    * engraving options. Should only be integers -1, 0, or 1
    *  -1=char engraved inwards; 1=char protruding outwards; 0=flat char
    */
-  static #ENGRAVE = -1;
+  private static ENGRAVE = -1;
 
   /**
    * font options. Should only be integers 1 or 2
    *  1=western, 2=lishu, 3=xingkai, 4=yankai, 5=wei
    * * when using lishu, there is a bug that a hole is missing in 馬. This is a problem in TextGeometry.
    */
-  static #FONT_TYPE = 1;
+  private static FONT_TYPE = 1;
 
   /**
    * texture options. Should only be integers
    *  1=white oak, 2=dark oak, other=UV grid
    */
-  static #BASE_TYPE = 1;
+  private static BASE_TYPE = 1;
 
   static #TEAMS = [
     new THREE.Color(0x666666), // grey/team0(stone)
     new THREE.Color(0xcc3333), // red/team1
-    (Piece.#BASE_TYPE === 1) ? new THREE.Color(0x1a1a1a) : new THREE.Color(0x3366ff), // black(light bg) blue(dark bg)/team2
+    (Piece.BASE_TYPE === 1) ? new THREE.Color(0x1a1a1a) : new THREE.Color(0x3366ff), // black(light bg) blue(dark bg)/team2
     new THREE.Color(0x408000)  // green/team3
   ];
 
-  static #HIGHLIGHT = 0x444444;
+  private HIGHLIGHT: number = 0x444444;
 
-  #team;
-  #type;
-  #piece;
+  private team: ChessTeam;
+  private type: ChessType;
+  private piece: THREE.Group;  // change this
 
   /**
    * Initializes the piece given its piece and type.
@@ -66,16 +70,17 @@ export class Piece {
    * @param {int} team
    * @param {char} type
    */
-  constructor(team, type) {
-    this.#team = (team === 0) ? 1 : team;
-    this.#type = type;
+  constructor(team: ChessTeam, type: ChessType) {
+    this.team = (team === 0) ? 1 : team;
+    this.type = type;
     if (type === 'S') {
-      this.#team = 0;
+      this.team = 0;
     }
+    this.piece = new THREE.Group();
   }
 
   addHighlight() {
-    this.#setHighlight(Piece.#HIGHLIGHT);
+    this.#setHighlight(this.HIGHLIGHT);
   }
 
   removeHighlight() {
@@ -83,38 +88,40 @@ export class Piece {
   }
 
   getTeam() {
-    return this.#team;
+    return this.team;
   }
 
   getType() {
-    return this.#type;
+    return this.type;
   }
 
   moveOut() {
-    this.#piece.position.x = 40;
+    this.piece.position.x = 40;
   }
 
-  moveTo(x, y) {
-    this.#piece.position.x = x;
-    this.#piece.position.y = y;
+  moveTo(x: number, y: number) {
+    this.piece.position.x = x;
+    this.piece.position.y = y;
   }
 
   unselect() {
-    this.#piece.rotation.x = 0;
-    this.#piece.position.z = 0;
-    this.#piece.scale.multiplyScalar(1/1.1);
+    this.piece.rotation.x = 0;
+    this.piece.position.z = 0;
+    this.piece.scale.multiplyScalar(1/1.1);
   }
 
   select() {
-    this.#piece.rotation.x = - THREE.MathUtils.degToRad(20);
-    this.#piece.position.z = 2.4;
-    this.#piece.scale.multiplyScalar(1.1);
+    this.piece.rotation.x = - THREE.MathUtils.degToRad(20);
+    this.piece.position.z = 2.4;
+    this.piece.scale.multiplyScalar(1.1);
   }
 
-  #setHighlight(color) {
-    let components = this.#piece.children;
+  #setHighlight(color: number) {
+    let components = this.piece.children;
     for (let i = 0; i < components.length; i++) {
-      components[i].material.emissive.setHex(color);
+      let curr = components[i];
+      if (!(curr instanceof THREE.Mesh)) { throw new Error("Components of piece must be mesh"); }
+      curr.material.emissive.setHex(color);
     }
   }
 
@@ -123,14 +130,14 @@ export class Piece {
    * return {THREE.Group} - the piece object to be used in three.js scene
    */
   async createPiece() {
-    let side = this.#createSide();
-    let surfaces = this.#createSurfaces();
-    let carve = this.#createCarve();
-    let text = await this.#createText();
-    let group = this.#combineAsGroup(side,surfaces,carve,text);
-    group.name = `piece-${this.#team}${this.#type}`; // TODO: remove this one day
-    this.#piece = group;
-    return this.#piece;
+    let side = this.createSide();
+    let surfaces = this.createSurfaces();
+    let carve = this.createCarve();
+    let text = await this.createText();
+    let group = this.combineAsGroup(side,surfaces,carve,text);
+    group.name = `piece-${this.team}${this.type}`; // TODO: remove this one day
+    this.piece = group;
+    return this.piece;
   }
 
   /**
@@ -141,9 +148,9 @@ export class Piece {
    * @param {float} offsetY - the offset of the texture in y direction. defined by number of repetition of the texture
    * @returns THREE.Material - a new instance of the material for the piece
    */
-  #generateMaterial(repeatX, repeatY, offsetX, offsetY) {
+  private generateMaterial(repeatX: number, repeatY: number, offsetX: number, offsetY: number) {
     let fileNames = ['whiteoak','walnut','uv_grid_opengl'];
-    let fileName = (this.#type === 'S') ? 'granite' : fileNames[Piece.#BASE_TYPE-1] || fileNames[fileNames.length-1];
+    let fileName = (this.type === 'S') ? 'granite' : fileNames[Piece.BASE_TYPE-1] || fileNames[fileNames.length-1];
     const map = new THREE.TextureLoader().load(`pic/${fileName}.jpg`);
     map.wrapS = map.wrapT = THREE.MirroredRepeatWrapping; // texture infinitely repeats in both directions
     map.colorSpace = THREE.SRGBColorSpace; // needed for colored models
@@ -157,14 +164,14 @@ export class Piece {
    * creates the side of the piece.
    * @returns THREE.Mesh - the side of the piece
    */
-  #createSide() {
+  private createSide() {
     const sideArc = new THREE.Path();
     sideArc.absellipse(15.5, 0, 4.5, 8, -Math.PI/2, Math.PI/2);
     const points = sideArc.getSpacedPoints(10); // 10 point samples on the arc, evenly spaced
 
     // select random region in the original picture to generate the material
-    const sideMat = this.#generateMaterial(1, 0.14, 0, 0.83 * Math.random());
-    const side = new THREE.Mesh(new THREE.LatheGeometry(points, Piece.#SEGMENTS), sideMat);
+    const sideMat = this.generateMaterial(1, 0.14, 0, 0.83 * Math.random());
+    const side = new THREE.Mesh(new THREE.LatheGeometry(points, Piece.SEGMENTS), sideMat);
     // sideMat.dispose();
     side.rotation.x = Math.PI/2;
     side.rotation.y = Math.PI;
@@ -176,7 +183,7 @@ export class Piece {
    * creates the piece by combining the components: surfaces, carve, text, and side.
    * @returns Group - the piece as the combined result
    */
-  #combineAsGroup(side,surfaces,carve, text) {
+  private combineAsGroup(side: THREE.Mesh, surfaces: THREE.Mesh, carve: THREE.Mesh, text: THREE.Mesh) {
     let group = new THREE.Group();
     surfaces.castShadow = true;
     side.castShadow = true;
@@ -186,9 +193,9 @@ export class Piece {
      * when ENGRAVE=0/1, show the front side of the text/carve & center it at the surface
      * when ENGRAVE=-1, show the back side & put the whole thing above the surface
      */
-    let centerZ = (Piece.#ENGRAVE === -1) ? 8.41 : 8.01;
-    this.#centerMeshAt(carve, 0, 0, centerZ);
-    this.#centerMeshAt(text, 0, 0, centerZ);
+    let centerZ = (Piece.ENGRAVE === -1) ? 8.41 : 8.01;
+    this.centerMeshAt(carve, 0, 0, centerZ);
+    this.centerMeshAt(text, 0, 0, centerZ);
     group.add(side);
     group.add(surfaces);
     group.add(carve);
@@ -200,10 +207,10 @@ export class Piece {
    * creates the up & down surfaces of the piece.
    * @returns THREE.Mesh - the surfaces of the piece
    */
-  #createSurfaces() {
-    const surfaceMat = this.#generateMaterial(0.25, 0.25, 0.75*Math.random(), 0.75*Math.random());
-    const surfaces = new THREE.Mesh(new THREE.CylinderGeometry(15.5, 15.5, 16, Piece.#SEGMENTS), surfaceMat);
-    surfaces.rotation.y = 2 * Math.PI / Piece.#SEGMENTS * Math.floor(Piece.#SEGMENTS * Math.random());
+  private createSurfaces() {
+    const surfaceMat = this.generateMaterial(0.25, 0.25, 0.75*Math.random(), 0.75*Math.random());
+    const surfaces = new THREE.Mesh(new THREE.CylinderGeometry(15.5, 15.5, 16, Piece.SEGMENTS), surfaceMat);
+    surfaces.rotation.y = 2 * Math.PI / Piece.SEGMENTS * Math.floor(Piece.SEGMENTS * Math.random());
     surfaces.rotation.x = Math.PI/2;
     return surfaces;
   }
@@ -212,15 +219,15 @@ export class Piece {
    * creates the ring-like engrave around the piece with a rough texture.
    * @returns THREE.Mesh - the ring mark on the piece
    */
-  #createCarve() {
+  private createCarve() {
     const carveShape = new THREE.Shape();
     carveShape.absarc(0,0,14.5,0,2*Math.PI);
     const holePath = new THREE.Path();
     holePath.absarc(0,0,13.5,0,2*Math.PI);
     carveShape.holes.push(holePath);
-    const carveGeo = new THREE.ExtrudeGeometry(carveShape,{depth:0,bevelEnabled:Piece.#ENGRAVE !== 0,bevelThickness:0.4});
-    let displaySide = (Piece.#ENGRAVE === -1) ? THREE.BackSide : THREE.FrontSide;
-    const carveMat = new THREE.MeshLambertMaterial({color: Piece.#TEAMS[this.#team], side: displaySide});
+    const carveGeo = new THREE.ExtrudeGeometry(carveShape,{depth:0,bevelEnabled:Piece.ENGRAVE !== 0,bevelThickness:0.4});
+    let displaySide = (Piece.ENGRAVE === -1) ? THREE.BackSide : THREE.FrontSide;
+    const carveMat = new THREE.MeshLambertMaterial({color: Piece.#TEAMS[this.team], side: displaySide});
     const carve = new THREE.Mesh(carveGeo, carveMat);
     return carve;
   }
@@ -229,7 +236,7 @@ export class Piece {
    * creates the character carving on the piece with a somewhat rough texture.
    * @returns THREE.Mesh - the character
    */
-  async #createText() {
+  private async createText() {
     const fontLoader = new FontLoader();
 
     /** // TODO: move it to README
@@ -243,23 +250,23 @@ export class Piece {
      */
     // TODO: add manager for this class to deal with settings.
     const FONTS = ['western', 'fz-lbs-lishu', 'fz-xingkai', 'ar-yankai', 'fz-wei'];
-    let fontName = FONTS[Piece.#FONT_TYPE - 1];
+    let fontName = FONTS[Piece.FONT_TYPE - 1];
     try {
       let font = await fontLoader.loadAsync(`util/fonts/${fontName}.json`);
-      let char = (Piece.#FONT_TYPE===1) ? Piece.#CHARACTERS[this.#type].charAt(0) : Piece.#CHARACTERS[this.#type].charAt(this.#team-1) || Piece.#CHARACTERS[this.#type].charAt(0); // 'a' || 's' => 'a'; 's'.charAt(2) => ''; '' || 's' => 's'
+      let char = (Piece.FONT_TYPE===1) ? Piece.CHARACTERS[this.type].charAt(0) : Piece.CHARACTERS[this.type].charAt(this.team-1) || Piece.CHARACTERS[this.type].charAt(0); // 'a' || 's' => 'a'; 's'.charAt(2) => ''; '' || 's' => 's'
       const settings = {
         font:font,
         size: 16,
         depth: 0,
         bevelEnabled: true,
-        bevelThickness: (Piece.#ENGRAVE === 0) ? 0 : 0.4,
+        bevelThickness: (Piece.ENGRAVE === 0) ? 0 : 0.4,
         bevelSize: 0.4,
-        bevelOffset: (Piece.#FONT_TYPE === 4 || Piece.#FONT_TYPE === 1) ? -0.4 : -0.2, // font 3 is too thick. No need to bold it more
+        bevelOffset: (Piece.FONT_TYPE === 4 || Piece.FONT_TYPE === 1) ? -0.4 : -0.2, // font 3 is too thick. No need to bold it more
         bevelSegments: 1
       };
       const geo = new TextGeometry(char, settings);
-      let displaySide = (Piece.#ENGRAVE === -1) ? THREE.BackSide : THREE.FrontSide;
-      const text = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: Piece.#TEAMS[this.#team], side: displaySide}));
+      let displaySide = (Piece.ENGRAVE === -1) ? THREE.BackSide : THREE.FrontSide;
+      const text = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: Piece.#TEAMS[this.team], side: displaySide}));
       return text;
     } catch(err) {
       console.error(err);
@@ -274,12 +281,14 @@ export class Piece {
    * @param {float} y - y coordinate of the center
    * @param {float} z - z coordinate of the center
    */
-  #centerMeshAt(mesh, x, y, z) {
-    const geometry = mesh.geometry;
-    geometry.computeBoundingBox(); // compute the bounding box to update its value
-    const offsetX = x - 0.5 * (geometry.boundingBox.max.x + geometry.boundingBox.min.x);
-    const offsetY = y - 0.5 * (geometry.boundingBox.max.y + geometry.boundingBox.min.y);
-    const offsetZ = z - 0.5 * (geometry.boundingBox.max.z + geometry.boundingBox.min.z);
+  private centerMeshAt(mesh: THREE.Mesh, x: number, y: number, z: number) {
+    const geometry: THREE.BufferGeometry = mesh.geometry;
+    geometry.computeBoundingBox(); // compute the bounding box to update its value so boundingbox property is not null
+    if (!geometry.boundingBox) { throw new Error("ComputeBoundingBox() did not update the boundingBox field"); }
+    let boundingBox: THREE.Box3 = geometry.boundingBox;
+    const offsetX = x - 0.5 * (boundingBox.max.x + boundingBox.min.x);
+    const offsetY = y - 0.5 * (boundingBox.max.y + boundingBox.min.y);
+    const offsetZ = z - 0.5 * (boundingBox.max.z + boundingBox.min.z);
     mesh.position.set(offsetX, offsetY, offsetZ);
   }
 }

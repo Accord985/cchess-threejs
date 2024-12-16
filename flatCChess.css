@@ -7,8 +7,8 @@
   width: 450px;
   height: 500px;
   background: center/450px 500px no-repeat url('./pic/flatCChess/board.svg'),
-      center/contain url("./pic/board-lighting.svg"),
-      center/contain url("./pic/whiteoak.jpg");
+      center/180% no-repeat url("./pic/board-lighting.svg"),
+      center/contain url("./pic/background.jpg");
   padding: 30px 27px;
   border-radius: 1%;
   box-shadow: 7px 7px 5px burlywood;

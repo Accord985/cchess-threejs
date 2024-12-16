@@ -21,7 +21,7 @@ import * as THREE from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
-import {Piece} from './piece.js';
+import {Piece} from './piece.ts';
 import Stats from 'three/addons/libs/stats.module.js';
 
 (function() {
@@ -35,6 +35,7 @@ import Stats from 'three/addons/libs/stats.module.js';
   const scene = new THREE.Scene(); // the scene that holds all the objects
   const camera = new THREE.OrthographicCamera(-7,7,7,-7,0.1,100); // responsible for looking at the objects
   const renderer = new THREE.WebGLRenderer(); // renders the result on the page based on scene and camera
+  // console.log(renderer.capabilities.getMaxAnisotropy());  // max anisotropy for my gpu. I get 16
   const raycaster = new THREE.Raycaster(); // object for raycasting (picking the contact point of cursor & object)
   const pointer = new THREE.Vector2(); // the position of the pointer on the screen
   const stats = new Stats(); // the stats modules for FPS, lag, and memory usage
@@ -44,8 +45,10 @@ import Stats from 'three/addons/libs/stats.module.js';
   let selected = null;
   let highlighted = null;
   let myTeam = 1;
+  let start = Date.now();
 
   async function init() {
+    console.log(`Start of application: ${Date.now() - start}ms`);
     if (!WebGL.isWebGL2Available()) {
       addErrorMsg();
       throw new Error('WebGL not supported');
@@ -56,11 +59,17 @@ import Stats from 'three/addons/libs/stats.module.js';
     scene.background = textureLoader.load('pic/background.jpg');
     setLighting();
 
+    console.log(`Creating board: ${Date.now() - start}ms`);
+
     const board = await createBoard(textureLoader);
     board.position.set(0,0,-0.9); // piece height: 1.8
     scene.add(board);
 
+    console.log(`Preparing layout: ${Date.now() - start}ms`);
+
     await layoutByName("default");
+
+    console.log(`Finished the scene, wrapping up: ${Date.now() - start}ms`);
 
     camera.position.z = 50 * Math.cos(Math.PI / 9);
     camera.position.y = -50 * Math.sin(Math.PI / 9);
@@ -80,7 +89,9 @@ import Stats from 'three/addons/libs/stats.module.js';
     gameView.addEventListener('mouseup', onClick); // cannot use click as it is not supported on safari
 
     document.body.appendChild(stats.dom);
+    console.log(`Starting to render: ${Date.now() - start}ms`);
     renderer.render(scene,camera);
+    console.log(`Finished: ${Date.now() - start}ms`);
     animate();
   }
 
@@ -266,6 +277,7 @@ import Stats from 'three/addons/libs/stats.module.js';
       for (let j = 0; j < 9; j++) {
         let setting = layout[i][j];
         if (setting) {
+          console.log(`    Adding piece: ${Date.now() - start}ms`);
           let piece = new Piece(setting.team, setting.type);
           let entity = await piece.createPiece();
           entity.scale.set(SCALE,SCALE,SCALE);
