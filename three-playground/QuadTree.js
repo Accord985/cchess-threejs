@@ -1,10 +1,44 @@
+// compile with "tsc --target es6 ./three-playground/QuadTree.ts"
 class Point {
-    constructor(x, y) {
+    constructor(x, y, h) {
         this.x = x;
         this.y = y;
+        this.h = h || 0; // if null use 0
     }
     getX() { return this.x; }
     getY() { return this.y; }
+    getH() { return this.h; }
+    equals(point2) {
+        if (point2 instanceof Edge) {
+            throw new Error("cannot compare edge and point");
+        }
+        return point2.x === this.x && point2.y === this.y;
+    }
+    // the edge here is a line segment with two endpoints, not an infinite line
+    distanceToEdge(edge) {
+        let x0 = this.x;
+        let y0 = this.y; // point A
+        let x1 = edge.getP1().x;
+        let y1 = edge.getP1().y; // point B
+        let x2 = edge.getP2().x;
+        let y2 = edge.getP2().y; // point C
+        // check if the height should be taken (foot of height within the segment)
+        // this is equivalent to: angle between vec<BA> & vec<BC> and between vec<CA> & vec<CB> are both acute
+        //  and equivalent to: dot product of BA & BC and CA & CB are both strictly positive
+        if ((x0 - x1) * (x2 - x1) + (y0 - y1) * (y2 - y1) > 0 &&
+            (x0 - x2) * (x1 - x2) + (y0 - y2) * (y1 - y2) > 0) {
+            // height: calculated from the area of the triangle ABC and the length of base BC: h=2A/b
+            // area could be calculated from the coordinates of the three vertices
+            let twiceArea = Math.abs(x1 * y2 + x2 * y0 + x0 * y1 - x1 * y0 - x2 * y1 - x0 * y2);
+            let baseLength = Math.sqrt(Math.pow((x1 - x2), 2) + Math.pow((y1 - y2), 2));
+            let heightLength = twiceArea / baseLength;
+            return heightLength;
+        }
+        else {
+            let distanceToEnds = Math.min(Math.sqrt(Math.pow((x1 - x0), 2) + Math.pow((y1 - y0), 2)), Math.sqrt(Math.pow((x2 - x0), 2) + Math.pow((y2 - y0), 2)));
+            return distanceToEnds;
+        }
+    }
 }
 class Edge {
     constructor(p1, p2) {
@@ -23,6 +57,12 @@ class Edge {
         }
         return y1 - (x1 - x) * (y2 - y1) / (x2 - x1);
     }
+    equals(edge2) {
+        if (edge2 instanceof Point) {
+            throw new Error("cannot compare edge and point");
+        }
+        return edge2.p1.equals(this.p1) && edge2.p2.equals(this.p2);
+    }
 }
 class Rectangle {
     constructor(x, y, w, h) {
@@ -37,34 +77,68 @@ class Rectangle {
     getX() { return this.x; }
     getY() { return this.y; }
     getW() { return this.w; }
-    ;
     getH() { return this.h; }
-    ;
     contains(element) {
         if (element instanceof Point) {
             let point = element;
-            return (point.getX() > this.x && point.getX() < this.x + this.w
-                && point.getY() > this.y && point.getY() < this.y + this.h);
+            // float point imprecision: 5.262 < 4.072 + 1.19 gives you true as 4.072 + 1.19 yields 5.2620000000000005
+            return (this.ge(point.getX(), this.x) && this.lt(point.getX(), this.x + this.w)
+                && this.ge(point.getY(), this.y) && this.lt(point.getY(), this.y + this.h));
+        }
+        else if (element instanceof Rectangle) {
+            let rect = element;
+            // edge cases: the new rectangle only shares a side and the remaining is outside. Reject these
+            return !(rect.x + rect.w < this.x || rect.x > this.x + this.w || // can't be all left or all right
+                rect.y + rect.h < this.y || rect.y > this.y + this.h);
         }
         else { // must be type Edge
             let edge = element;
+            let p1x = edge.getP1().getX();
+            let p1y = edge.getP1().getY();
+            let p2x = edge.getP2().getX();
+            let p2y = edge.getP2().getY();
+            // edge cases: the line lies exactly on edge. Accept this one as contained
+            if ((this.eq(p1x, this.x + this.w) && this.eq(p2x, this.x + this.w)) ||
+                (this.eq(p1x, this.x) && this.eq(p2x, this.x))) {
+                let yOverlap = this.findOverlap(p1y, p2y, this.y, this.y + this.h);
+                return yOverlap[0] < yOverlap[1];
+            }
             // find the overlapping x values of edge in rectangle
-            let xOverlap = this.findOverlap(edge.getP1().getX(), edge.getP2().getX(), this.x, this.x + this.w);
-            if (xOverlap[0] >= xOverlap[1]) {
+            let xOverlap = this.findOverlap(p1x, p2x, this.x, this.x + this.w);
+            if (xOverlap[0] > xOverlap[1]) {
                 return false;
+            }
+            else if (xOverlap[0] === xOverlap[1]) {
+                let yOverlap = this.findOverlap(p1y, p2y, this.y, this.y + this.h);
+                return yOverlap[0] < yOverlap[1];
             }
             // check if the y values overlap (boundary excluded) [rectangle and line in the overlapping x values]
             let yOverlap = this.findOverlap(edge.computeYOnEdge(xOverlap[0]), edge.computeYOnEdge(xOverlap[1]), this.y, this.y + this.h);
-            return yOverlap[0] < yOverlap[1];
+            return yOverlap[0] <= yOverlap[1];
         }
     }
     findOverlap(start1, end1, start2, end2) {
-        let min1 = Math.min(start1, end1);
-        let max1 = Math.max(start1, end1);
-        let min2 = Math.min(start2, end2);
-        let max2 = Math.max(start2, end2);
-        return [Math.max(min1, min2), Math.min(max1, max2)]; // smaller of range, larger of range
+        // these operations could also be imprecise: Math.max(5.262, 4.072+1.19) => 5.2620000000000005
+        let min1 = this.min(start1, end1);
+        let max1 = this.max(start1, end1);
+        let min2 = this.min(start2, end2);
+        let max2 = this.max(start2, end2);
+        return [this.max(min1, min2), this.min(max1, max2)]; // smaller of range, larger of range
     }
+    // these functions are for precise float point comparison.
+    compareFloat(left, right, threshold) {
+        if (Math.abs(left - right) < threshold) {
+            return 0;
+        }
+        return (left < right) ? -1 : 1;
+    }
+    lt(left, right) { return this.compareFloat(left, right, 1e-8) < 0; }
+    gt(left, right) { return this.compareFloat(left, right, 1e-8) > 0; }
+    le(left, right) { return this.compareFloat(left, right, 1e-8) <= 0; }
+    ge(left, right) { return this.compareFloat(left, right, 1e-8) >= 0; }
+    eq(left, right) { return this.compareFloat(left, right, 1e-8) === 0; }
+    min(a, b) { return this.gt(a, b) ? b : a; }
+    max(a, b) { return this.le(a, b) ? b : a; }
 }
 class QuadTree {
     constructor(boundary, capacity) {
@@ -75,17 +149,20 @@ class QuadTree {
         this.capacity = capacity;
         this.elements = [];
         this.children = null; // null, or array of QuadTree. nw, ne, sw, se
+        this.size = 0;
     }
     getBoundary() { return this.boundary; }
     getCapacity() { return this.capacity; }
     getChildren() { return this.children; }
     getElements() { return this.elements; }
+    getSize() { return this.size; }
     insert(element) {
         if (!this.boundary.contains(element)) {
             return;
         }
         if (this.elements.length < this.capacity) {
             this.elements.push(element);
+            this.size++;
         }
         else {
             // if hasn't subdivided, initiate the children (subdivide)
@@ -98,6 +175,11 @@ class QuadTree {
             ;
             for (let i = 0; i < 4; i++) {
                 this.children[i].insert(element);
+            }
+            // recalculate the size for parent node
+            this.size = this.capacity;
+            for (let i = 0; i < 4; i++) {
+                this.size += this.children[i].size;
             }
         }
     }
@@ -116,7 +198,75 @@ class QuadTree {
         this.children[2] = new QuadTree(southwest, this.capacity);
         this.children[3] = new QuadTree(southeast, this.capacity);
     }
-    query() {
+    query(queryElement) {
+        let result = new Set();
+        this.queryHelper(queryElement, result);
+        return result;
+    }
+    queryHelper(queryElement, result) {
+        if (!this.boundary.contains(queryElement)) {
+            return;
+        }
+        // add own elements
+        for (let i = 0; i < this.elements.length; i++) {
+            result.add(this.elements[i]);
+        }
+        // check its children
+        if (this.children) {
+            for (let i = 0; i < 4; i++) {
+                this.children[i].queryHelper(queryElement, result);
+            }
+        }
+    }
+    // queryWithPoint(point: Point): Set<T> {
+    //   let result = new Set<T>();
+    //   this.queryPointHelper(point, result);
+    //   return result;
+    // }
+    // private queryPointHelper(point: Point, result: Set<T>): void {
+    //   if (!this.boundary.contains(point)) {return;}
+    //   // add own elements
+    //   for (let i = 0; i < this.elements.length; i++) {
+    //     result.add(this.elements[i]);
+    //   }
+    //   // check its children
+    //   if (this.children) {
+    //     for (let i = 0; i < 4; i++) {
+    //       this.children[i].queryPointHelper(point, result);
+    //     }
+    //   }
+    // }
+    // queryWithRay(ray: Edge): Set<T> {
+    //   let result = new Set<T>();
+    //   this.queryRayHelper(ray, result);
+    //   return result;
+    // }
+    // private queryRayHelper(ray: Edge, result: Set<T>): void {
+    //   if (!this.boundary.contains(ray)) {return;}
+    //   // add own elements
+    //   for (let i = 0; i < this.elements.length; i++) {
+    //     result.add(this.elements[i]);
+    //   }
+    //   // check its children
+    //   if (this.children) {
+    //     for (let i = 0; i < 4; i++) {
+    //       this.children[i].queryRayHelper(ray, result);
+    //     }
+    //   }
+    // }
+    has(element) {
+        for (let i = 0; i < this.elements.length; i++) {
+            if (this.elements[i].equals(element)) {
+                return true;
+            }
+        }
+        let result = false;
+        if (this.children) {
+            for (let i = 0; i < 4; i++) {
+                result = result || this.children[i].has(element);
+            }
+        }
+        return result;
     }
 }
 export { Point, Edge, Rectangle, QuadTree };
