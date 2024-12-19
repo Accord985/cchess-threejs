@@ -50,8 +50,8 @@ import { createTextCarve } from './createTextCarve.js';
 
     let geometry = await createTextGeometry();
     let betterGeometry = createTextCarve(geometry);
-    // geometry.dispose();
-    // geometry = betterGeometry;
+    geometry.dispose();
+    geometry = betterGeometry;
 
     // let wireframe = new THREE.WireframeGeometry(geometry);
     // const line = new THREE.LineSegments( wireframe );
@@ -60,8 +60,8 @@ import { createTextCarve } from './createTextCarve.js';
     // line.material.transparent = true;
     // scene.add( line );
 
-    let points = new THREE.Points(betterGeometry, new THREE.PointsMaterial({size: 1.5}));
-    scene.add(points);
+    // let points = new THREE.Points(betterGeometry, new THREE.PointsMaterial({size: 1.5}));
+    // scene.add(points);
 
     let material = new THREE.MeshPhongMaterial({
       side: THREE.BackSide,
@@ -70,24 +70,17 @@ import { createTextCarve } from './createTextCarve.js';
       shininess: 30,
     });
     let pieces = new THREE.Mesh(geometry, material);
-    // scene.add(pieces);
+    // console.log(geometry);
+    scene.add(pieces);
 
     // let bufferGeo = new THREE.BufferGeometry().setFromPoints([
-    //   new THREE.Vector2(141.42249999999999, 17.039),
-    //   new THREE.Vector2(145.633, 17.039),
-    //   new THREE.Vector2(146.76945687203792, 17.039),
-    //   new THREE.Vector2(141.624025, 17.039),
-    //   new THREE.Vector2(148.66328372093022, 17.039),
-    //   new THREE.Vector2(161.42888946322066 , 17.039),
-    //   new THREE.Vector2(167.7557714285714, 17.039),
-    //   new THREE.Vector2(165.8607350272232, 17.039),
-    //   new THREE.Vector2(171.14161285714283, 17.039),
-    //   new THREE.Vector2(184.28274571890145, 17.039),
-    //   new THREE.Vector2(185.27401777777774, 17.039),
-    //   new THREE.Vector2(187.90612389092388, 17.039),
-    //   new THREE.Vector2(190.51521889763777, 17.039),
-    //   new THREE.Vector2(192.6754, 17.039),
-    //   new THREE.Vector2(194.69841510791366, 17.039),
+    //   new THREE.Vector2(1.784305625, 7.774100312500002),
+    //   new THREE.Vector2(5.808089289470061, 7.774100312500002),
+    //   new THREE.Vector2(3.13953368806306, 7.774100312500002),
+    //   new THREE.Vector2(7.210816200096002, 7.774100312500002),
+    //   new THREE.Vector2(11.177009915123456, 7.774100312500002),
+    //   new THREE.Vector2(10.416920684347984, 7.774100312500002),
+    //   new THREE.Vector2(18.6560000, 7.774100312500002),
     // ]);
     // scene.add(new THREE.Points(bufferGeo, new THREE.PointsMaterial({size: 3})));
 
@@ -105,7 +98,7 @@ import { createTextCarve } from './createTextCarve.js';
   }
 
   async function createTextGeometry() {
-    let font = await loader.loadAsync('ar-yankai.json');
+    let font = await loader.loadAsync('fz-xingkai.json');
     const settings = {
       font: font,
       size: 16,

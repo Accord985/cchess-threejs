@@ -1,4 +1,5 @@
 // compile with "tsc --target es6 ./three-playground/QuadTree.ts"
+import { lt, ge, eq, gt, le, min, max } from './FloatComparison.js';
 class Point {
     constructor(x, y, h) {
         this.x = x;
@@ -12,7 +13,7 @@ class Point {
         if (point2 instanceof Edge) {
             throw new Error("cannot compare edge and point");
         }
-        return point2.x === this.x && point2.y === this.y;
+        return eq(point2.x, this.x) && eq(point2.y, this.y);
     }
     // the edge here is a line segment with two endpoints, not an infinite line
     distanceToEdge(edge) {
@@ -82,8 +83,8 @@ class Rectangle {
         if (element instanceof Point) {
             let point = element;
             // float point imprecision: 5.262 < 4.072 + 1.19 gives you true as 4.072 + 1.19 yields 5.2620000000000005
-            return (this.ge(point.getX(), this.x) && this.lt(point.getX(), this.x + this.w)
-                && this.ge(point.getY(), this.y) && this.lt(point.getY(), this.y + this.h));
+            return (ge(point.getX(), this.x) && lt(point.getX(), this.x + this.w)
+                && ge(point.getY(), this.y) && lt(point.getY(), this.y + this.h));
         }
         else if (element instanceof Rectangle) {
             let rect = element;
@@ -98,47 +99,33 @@ class Rectangle {
             let p2x = edge.getP2().getX();
             let p2y = edge.getP2().getY();
             // edge cases: the line lies exactly on edge. Accept this one as contained
-            if ((this.eq(p1x, this.x + this.w) && this.eq(p2x, this.x + this.w)) ||
-                (this.eq(p1x, this.x) && this.eq(p2x, this.x))) {
+            if ((eq(p1x, this.x + this.w) && eq(p2x, this.x + this.w)) ||
+                (eq(p1x, this.x) && eq(p2x, this.x))) {
                 let yOverlap = this.findOverlap(p1y, p2y, this.y, this.y + this.h);
-                return yOverlap[0] < yOverlap[1];
+                return lt(yOverlap[0], yOverlap[1]);
             }
             // find the overlapping x values of edge in rectangle
             let xOverlap = this.findOverlap(p1x, p2x, this.x, this.x + this.w);
-            if (xOverlap[0] > xOverlap[1]) {
+            if (gt(xOverlap[0], xOverlap[1])) {
                 return false;
             }
-            else if (xOverlap[0] === xOverlap[1]) {
+            else if (eq(xOverlap[0], xOverlap[1])) {
                 let yOverlap = this.findOverlap(p1y, p2y, this.y, this.y + this.h);
-                return yOverlap[0] < yOverlap[1];
+                return lt(yOverlap[0], yOverlap[1]);
             }
             // check if the y values overlap (boundary excluded) [rectangle and line in the overlapping x values]
             let yOverlap = this.findOverlap(edge.computeYOnEdge(xOverlap[0]), edge.computeYOnEdge(xOverlap[1]), this.y, this.y + this.h);
-            return yOverlap[0] <= yOverlap[1];
+            return le(yOverlap[0], yOverlap[1]);
         }
     }
     findOverlap(start1, end1, start2, end2) {
         // these operations could also be imprecise: Math.max(5.262, 4.072+1.19) => 5.2620000000000005
-        let min1 = this.min(start1, end1);
-        let max1 = this.max(start1, end1);
-        let min2 = this.min(start2, end2);
-        let max2 = this.max(start2, end2);
-        return [this.max(min1, min2), this.min(max1, max2)]; // smaller of range, larger of range
+        let min1 = min(start1, end1);
+        let max1 = max(start1, end1);
+        let min2 = min(start2, end2);
+        let max2 = max(start2, end2);
+        return [max(min1, min2), min(max1, max2)]; // smaller of range, larger of range
     }
-    // these functions are for precise float point comparison.
-    compareFloat(left, right, threshold) {
-        if (Math.abs(left - right) < threshold) {
-            return 0;
-        }
-        return (left < right) ? -1 : 1;
-    }
-    lt(left, right) { return this.compareFloat(left, right, 1e-8) < 0; }
-    gt(left, right) { return this.compareFloat(left, right, 1e-8) > 0; }
-    le(left, right) { return this.compareFloat(left, right, 1e-8) <= 0; }
-    ge(left, right) { return this.compareFloat(left, right, 1e-8) >= 0; }
-    eq(left, right) { return this.compareFloat(left, right, 1e-8) === 0; }
-    min(a, b) { return this.gt(a, b) ? b : a; }
-    max(a, b) { return this.le(a, b) ? b : a; }
 }
 class QuadTree {
     constructor(boundary, capacity) {
@@ -176,11 +163,13 @@ class QuadTree {
             for (let i = 0; i < 4; i++) {
                 this.children[i].insert(element);
             }
+            let before = this.size;
             // recalculate the size for parent node
             this.size = this.capacity;
             for (let i = 0; i < 4; i++) {
                 this.size += this.children[i].size;
             }
+            let after = this.size;
         }
     }
     subdivide() {
@@ -218,43 +207,30 @@ class QuadTree {
             }
         }
     }
-    // queryWithPoint(point: Point): Set<T> {
-    //   let result = new Set<T>();
-    //   this.queryPointHelper(point, result);
-    //   return result;
-    // }
-    // private queryPointHelper(point: Point, result: Set<T>): void {
-    //   if (!this.boundary.contains(point)) {return;}
-    //   // add own elements
-    //   for (let i = 0; i < this.elements.length; i++) {
-    //     result.add(this.elements[i]);
-    //   }
-    //   // check its children
-    //   if (this.children) {
-    //     for (let i = 0; i < 4; i++) {
-    //       this.children[i].queryPointHelper(point, result);
-    //     }
-    //   }
-    // }
-    // queryWithRay(ray: Edge): Set<T> {
-    //   let result = new Set<T>();
-    //   this.queryRayHelper(ray, result);
-    //   return result;
-    // }
-    // private queryRayHelper(ray: Edge, result: Set<T>): void {
-    //   if (!this.boundary.contains(ray)) {return;}
-    //   // add own elements
-    //   for (let i = 0; i < this.elements.length; i++) {
-    //     result.add(this.elements[i]);
-    //   }
-    //   // check its children
-    //   if (this.children) {
-    //     for (let i = 0; i < 4; i++) {
-    //       this.children[i].queryRayHelper(ray, result);
-    //     }
-    //   }
-    // }
+    // only applies to QuadTree of Point.
+    // retrieves the element with given x and y. I assume that only one such element exists.
+    retrieve(queryX, queryY) {
+        let queryPoint = new Point(queryX, queryY);
+        if (!this.boundary.contains(queryPoint)) {
+            return null;
+        }
+        for (let i = 0; i < this.elements.length; i++) {
+            if (this.elements[i].equals(queryPoint)) {
+                return this.elements[i];
+            }
+        }
+        let result = null;
+        if (this.children) {
+            for (let i = 0; i < 4; i++) {
+                result = result || this.children[i].retrieve(queryX, queryY);
+            }
+        }
+        return result;
+    }
     has(element) {
+        if (!this.boundary.contains(element)) {
+            return false;
+        }
         for (let i = 0; i < this.elements.length; i++) {
             if (this.elements[i].equals(element)) {
                 return true;
