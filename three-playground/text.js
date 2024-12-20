@@ -35,7 +35,7 @@ import { createTextCarve } from './createTextCarve.js';
     renderer.setSize(450, 500);
     document.body.appendChild(renderer.domElement);
     let control = new OrbitControls(camera, renderer.domElement);
-    camera.position.set(0,-200,250);
+    camera.position.set(0,0,250);  // 0, -200, 250
     camera.lookAt(0,0,0);
     control.update();
 
@@ -73,16 +73,21 @@ import { createTextCarve } from './createTextCarve.js';
     // console.log(geometry);
     scene.add(pieces);
 
-    // let bufferGeo = new THREE.BufferGeometry().setFromPoints([
-    //   new THREE.Vector2(1.784305625, 7.774100312500002),
-    //   new THREE.Vector2(5.808089289470061, 7.774100312500002),
-    //   new THREE.Vector2(3.13953368806306, 7.774100312500002),
-    //   new THREE.Vector2(7.210816200096002, 7.774100312500002),
-    //   new THREE.Vector2(11.177009915123456, 7.774100312500002),
-    //   new THREE.Vector2(10.416920684347984, 7.774100312500002),
-    //   new THREE.Vector2(18.6560000, 7.774100312500002),
+    // let points = [];
+    // for (let i = 0; i < 128; i++) {
+    //   let currX = findNthSampleValue(2.926, 16.12092, i);
+    //   for (let j = 0; j < 128; j++) {
+    //     let currY = findNthSampleValue(-2.9978, 21.1428, j);
+    //     points.push(new THREE.Vector3(currX, currY, 0));
+    //   }
+    // }
+    // let bufferGeo = new THREE.BufferGeometry().setFromPoints(points);
+    // scene.add(new THREE.Points(bufferGeo, new THREE.PointsMaterial({size: 2})));
+
+    // let bufferGeo2 = new THREE.BufferGeometry().setFromPoints([
+    //   new THREE.Vector2(2.98897234375, 5.01333),
     // ]);
-    // scene.add(new THREE.Points(bufferGeo, new THREE.PointsMaterial({size: 3})));
+    // scene.add(new THREE.Points(bufferGeo2, new THREE.PointsMaterial({size: 4, color: 0xffff00})));
 
 
     // geometry.dispose();
@@ -98,14 +103,24 @@ import { createTextCarve } from './createTextCarve.js';
   }
 
   async function createTextGeometry() {
-    let font = await loader.loadAsync('fz-xingkai.json');
+    let font = await loader.loadAsync('ar-yankai.json');
     const settings = {
       font: font,
       size: 16,
       depth: 0.4, height: 0.4
     };
     // 帥將王仕士侍相象像馬車炮兵卒勇岩
-    const geometry = new TextGeometry('帥', settings);
+    const geometry = new TextGeometry('馬', settings);
     return geometry;
   }
 })();
+
+function findNthSampleValue(min , rangeSpan, n) {
+  if (!Number.isInteger(n) || !Number.isInteger(128)) {
+    throw new Error("index n and resolution should both be integers");
+  }
+  if (n >= 128 || n < 0) {
+    throw new Error("n should be 0-based index from 0 to resolution-1");
+  }
+  return min + (n + 0.5) / 128 * rangeSpan;
+}

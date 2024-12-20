@@ -3,10 +3,11 @@
 // compile with "tsc --target es6 ./three-playground/createTextCarve.ts"
 import * as THREE from 'three';
 import * as QT from './QuadTree.js';
-import { gt, eq, ne, le } from './FloatComparison.js';
+import { gt, eq, ne, le, lt } from './FloatComparison.js';
 // better be 2^n. I guess that's faster.
 // Too small values might result in large imprecision or even errors.
-const RESOLUTION = 128;
+const RESOLUTION = 512;
+const HEIGHT_FACTOR = 0.15;
 function createOutline(shapes) {
     let combinedOutline = { shapes: [], holes: [] };
     for (let i = 0; i < shapes.length; i++) {
@@ -62,16 +63,6 @@ function findOutlineBoundary(shapes) {
     }
     return new QT.Rectangle(minX - 1e-3, minY - 1e-3, maxX - minX + 2e-3, maxY - minY + 2e-3);
 }
-function buildPointTree(points, boundary) {
-    let pointTree = new QT.QuadTree(boundary, 4); // pass the boundary so no need to recalculate
-    for (let i = 0; i < points.length; i++) {
-        let currPathPoints = points[i];
-        for (let j = 0; j < currPathPoints.length; j++) {
-            pointTree.insert(new QT.Point(currPathPoints[j].x, currPathPoints[j].y));
-        }
-    }
-    return pointTree;
-}
 function buildEdgeTree(points, boundary) {
     let edgeTree = new QT.QuadTree(boundary, 4);
     for (let i = 0; i < points.length; i++) {
@@ -79,12 +70,7 @@ function buildEdgeTree(points, boundary) {
         for (let j = 0; j < currPathPoints.length - 1; j++) {
             // the edge must be defined with start to end. Cannot flip this order. This is crucial for checkPointInShape()
             let currEdge = new QT.Edge(new QT.Point(currPathPoints[j].x, currPathPoints[j].y), new QT.Point(currPathPoints[j + 1].x, currPathPoints[j + 1].y));
-            // let before = edgeTree.getSize();
             edgeTree.insert(currEdge);
-            // let after = edgeTree.getSize();
-            // if (before === after) {
-            //   console.log("I didn't add ", currEdge, " successfully to ", edgeTree);
-            // }
         }
     }
     // no need to do final point back to first point because the points already has duplicate starting & ending points
@@ -160,7 +146,7 @@ function sample(shapeEdges, holeEdges, shapeBoundary) {
             let currSample = new QT.Point(currX, currY);
             if (checkPointInShape(currSample, shapeEdges) && !checkPointInShape(currSample, holeEdges)) {
                 let distance = Math.min(findDistanceToOutline(currSample, shapeEdges), findDistanceToOutline(currSample, holeEdges));
-                let currVector = new QT.Point(currX, currY, -distance);
+                let currVector = new QT.Point(currX, currY, -distance * HEIGHT_FACTOR);
                 samplesInShape.insert(currVector);
             }
         }
@@ -202,57 +188,155 @@ function connectAmongSamples(samplesInShape, pointsBuffer, shapeBoundary) {
         }
     }
 }
-function connectSamplesAndEdges(samplesInShape, points, pointsBuffer, shapeBoundary) {
-    // for each sample, query with area around it (+-0.5step). Connect all points
-    // query;
-    let widthStep = 1 / RESOLUTION * shapeBoundary.getW() + 1e-3;
-    let heightStep = 1 / RESOLUTION * shapeBoundary.getH() + 1e-3;
-    const findClosestSample = (px, py) => {
-        let queryArea = new QT.Rectangle(px - widthStep, py - heightStep, 2 * widthStep, 2 * heightStep);
-        let relevantSamples = samplesInShape.query(queryArea);
-        let minDistanceSquare = Infinity;
-        let result = null;
-        relevantSamples.forEach((sample) => {
-            if (queryArea.contains(sample)) {
-                let currDistanceSquare = Math.pow((sample.getX() - px), 2) + Math.pow((sample.getY() - py), 2);
-                if (currDistanceSquare < minDistanceSquare) {
-                    result = sample;
-                    minDistanceSquare = currDistanceSquare;
-                }
+// for each sample, query with area around it (+-1step). maybe try 0.5 step.
+// Sometimes a point really has 2 closest sample (same distance to them).
+function findClosestSample(px, py, halfWidth, halfHeight, samplesInShape) {
+    const DELTA = 1e-3;
+    halfWidth += DELTA;
+    halfHeight += DELTA;
+    let queryArea = new QT.Rectangle(px - halfWidth, py - halfHeight, 2 * halfWidth, 2 * halfHeight);
+    let relevantSamples = samplesInShape.query(queryArea);
+    let minDistanceSquare = Infinity;
+    let result = [];
+    relevantSamples.forEach((sample) => {
+        if (queryArea.contains(sample)) {
+            let currDistanceSquare = Math.pow((sample.getX() - px), 2) + Math.pow((sample.getY() - py), 2);
+            if (eq(currDistanceSquare, minDistanceSquare)) { // same but not enough to beat
+                result.push(sample);
             }
-        });
-        return result;
-    };
+            if (lt(currDistanceSquare, minDistanceSquare)) {
+                result.length = 0; // clear it all
+                result.push(sample);
+                minDistanceSquare = currDistanceSquare;
+            }
+        }
+    });
+    return result;
+}
+function selfConnect(pathPoint, closestSamples, pointsBuffer) {
+    if (closestSamples.length > 1) {
+        console.log("self-connecting...", closestSamples);
+        let startVec = new THREE.Vector3(pathPoint.x, pathPoint.y, 0);
+        for (let i = 0; i < closestSamples.length - 1; i++) {
+            pointsBuffer.push(toVector3(closestSamples[i]), toVector3(closestSamples[i + 1]), startVec);
+        }
+    }
+}
+function removeShared(arr1, arr2) {
+    for (let i = 0; i < arr1.length; i++) {
+        let indexIn2 = arr2.indexOf(arr1[i]);
+        if (indexIn2 !== -1) {
+            arr2.splice(indexIn2, 1);
+            arr1.splice(i, 1); // delete the element at the index
+        }
+    }
+}
+function interConnect(start, end, startClosests, endClosests, pointsBuffer, widthStep, heightStep, samplesInShape) {
+    // didn't consider if start & end have more than 1 not shared element
+    if (startClosests.length === 0 || endClosests.length === 0) {
+        console.warn("edge with ", start, end, " is omitted");
+        return;
+    }
+    // removeShared(startClosest, endClosest);
+    // idk but just take the first one for now. lots of edge cases to consider
+    let startClosest = startClosests[0];
+    let endClosest = endClosests[0];
+    if (startClosest.equals(endClosest)) {
+        pointsBuffer.push(new THREE.Vector3(start.x, start.y, 0), new THREE.Vector3(end.x, end.y, 0), toVector3(startClosest));
+    }
+    else {
+        let startPoint = new QT.Point(start.x, start.y);
+        let endPoint = new QT.Point(end.x, end.y);
+        pushFourPoints(startPoint, endPoint, startClosest, endClosest, pointsBuffer);
+        // you might miss a triangle if you push 4 points (a trapezium) but the two closest samples are not 45deg
+        if (ne(startClosest.getX() - endClosest.getX(), startClosest.getY() - endClosest.getY()) &&
+            ne(startClosest.getX() - endClosest.getX(), 0) && ne(startClosest.getY() - endClosest.getY(), 0)) {
+            let widthUnits = Math.round((endClosest.getX() - startClosest.getX()) / widthStep); // float imprecision
+            let heightUnits = Math.round((endClosest.getY() - startClosest.getY()) / heightStep);
+            // try all 4 directions, but guaranteed to have only one to work
+            // firstly, try moving once and does samplesInShape.has() the element?
+            // if so, then move n times
+            let n = Math.abs(Math.abs(widthUnits) - Math.abs(heightUnits));
+            let retrieved, previous;
+            // start to end X
+            previous = startClosest;
+            retrieved = samplesInShape.retrieve(startClosest.getX() + Math.sign(widthUnits) * widthStep, startClosest.getY());
+            for (let i = 0; i < n; i++) {
+                if (!retrieved) {
+                    console.log("i ", i, ", n ", n);
+                    continue;
+                } // why would this happen???
+                pointsBuffer.push(toVector3(retrieved), toVector3(previous), toVector3(endClosest));
+                previous = retrieved;
+                retrieved = samplesInShape.retrieve(previous.getX() + Math.sign(widthUnits) * widthStep, previous.getY());
+            }
+            // start to end Y
+            previous = startClosest;
+            retrieved = samplesInShape.retrieve(startClosest.getX(), startClosest.getY() + Math.sign(heightUnits) * heightStep);
+            for (let i = 0; i < n; i++) {
+                if (!retrieved) {
+                    console.log("i ", i, ", n ", n);
+                    continue;
+                } // why would this happen???
+                pointsBuffer.push(toVector3(retrieved), toVector3(previous), toVector3(endClosest));
+                previous = retrieved;
+                retrieved = samplesInShape.retrieve(previous.getX(), previous.getY() + Math.sign(heightUnits) * heightStep);
+            }
+            // seems like it works without the end to start part
+            // end to start X
+            previous = endClosest;
+            retrieved = samplesInShape.retrieve(endClosest.getX() - Math.sign(widthUnits) * widthStep, endClosest.getY());
+            for (let i = 0; i < n; i++) {
+                if (!retrieved) {
+                    console.log("i ", i, ", n ", n);
+                    continue;
+                } // why would this happen???
+                pointsBuffer.push(toVector3(retrieved), toVector3(previous), toVector3(startClosest));
+                previous = retrieved;
+                retrieved = samplesInShape.retrieve(previous.getX() - Math.sign(widthUnits) * widthStep, previous.getY());
+            }
+            // end to start Y
+            previous = endClosest;
+            retrieved = samplesInShape.retrieve(endClosest.getX(), endClosest.getY() - Math.sign(heightUnits) * heightStep);
+            for (let i = 0; i < n; i++) {
+                if (!retrieved) {
+                    console.log("i ", i, ", n ", n);
+                    continue;
+                } // why would this happen???
+                pointsBuffer.push(toVector3(retrieved), toVector3(previous), toVector3(startClosest));
+                previous = retrieved;
+                retrieved = samplesInShape.retrieve(previous.getX(), previous.getY() - Math.sign(heightUnits) * heightStep);
+            }
+        }
+    }
+}
+function pushFourPoints(p1, p2, p3, p4, pointsBuffer) {
+    // flatten the the vectors and check their cross products, a negative z coordinate means clockwise rotation
+    // edgeP1 and startClosest; edgeP1 and endClosest
+    if (!pointsOnSameSide(p1, p2, p3, p4)) {
+        pointsBuffer.push(toVector3(p3), toVector3(p4), toVector3(p1), toVector3(p3), toVector3(p4), toVector3(p2));
+    }
+    else if (!pointsOnSameSide(p1, p4, p3, p2)) {
+        pointsBuffer.push(toVector3(p3), toVector3(p2), toVector3(p1), toVector3(p3), toVector3(p2), toVector3(p4));
+    }
+    else { // p3 + p1 has to be the line
+        pointsBuffer.push(toVector3(p3), toVector3(p1), toVector3(p2), toVector3(p3), toVector3(p1), toVector3(p4));
+    }
+}
+function connectSamplesAndEdges(samplesInShape, points, pointsBuffer, shapeBoundary) {
+    let widthStep = 1 / RESOLUTION * shapeBoundary.getW();
+    let heightStep = 1 / RESOLUTION * shapeBoundary.getH();
     for (let i = 0; i < points.length; i++) {
         let currPath = points[i];
         let currStart = currPath[0];
-        let startClosest = findClosestSample(currStart.x, currStart.y);
+        let startClosest = findClosestSample(currStart.x, currStart.y, widthStep, heightStep, samplesInShape); // probably halfstep is even enough
+        // connect for start in case it has more than 1 closest samples
+        selfConnect(currStart, startClosest, pointsBuffer);
         for (let j = 0; j < currPath.length - 1; j++) {
             let currEnd = currPath[j + 1];
-            let endClosest = findClosestSample(currEnd.x, currEnd.y);
-            if (!startClosest || !endClosest) {
-                console.warn("edge with ", currStart, currEnd, " is omitted");
-            }
-            else if (startClosest.equals(endClosest)) {
-                pointsBuffer.push(new THREE.Vector3(currStart.x, currStart.y, 0), new THREE.Vector3(currEnd.x, currEnd.y, 0), toVector3(startClosest));
-            }
-            else {
-                // flatten the the vectors and check their cross products, a negative z coordinate means clockwise rotation
-                // edgeP1 and startClosest; edgeP1 and endClosest
-                let startPoint = new QT.Point(currStart.x, currStart.y);
-                let endPoint = new QT.Point(currEnd.x, currEnd.y);
-                let startVec = new THREE.Vector3(currStart.x, currStart.y, 0);
-                let endVec = new THREE.Vector3(currEnd.x, currEnd.y, 0);
-                if (!pointsOnSameSide(startClosest, endClosest, startPoint, endPoint)) {
-                    pointsBuffer.push(startVec, endVec, toVector3(startClosest), startVec, endVec, toVector3(endClosest));
-                }
-                else if (!pointsOnSameSide(startClosest, endPoint, startPoint, endClosest)) {
-                    pointsBuffer.push(startVec, toVector3(endClosest), toVector3(startClosest), startVec, toVector3(endClosest), endVec);
-                }
-                else { // start + startClosest has to be the line
-                    pointsBuffer.push(startVec, toVector3(startClosest), toVector3(endClosest), startVec, toVector3(startClosest), endVec);
-                }
-            }
+            let endClosest = findClosestSample(currEnd.x, currEnd.y, widthStep, heightStep, samplesInShape);
+            selfConnect(currEnd, endClosest, pointsBuffer);
+            interConnect(currStart, currEnd, startClosest, endClosest, pointsBuffer, widthStep, heightStep, samplesInShape);
             currStart = currEnd;
             startClosest = endClosest;
         }
@@ -271,51 +355,7 @@ function pointsOnSameSide(point1, point2, edgeP1, edgeP2) {
     let v0y = edgeP2.getY() - edgeP1.getY();
     let crossZP1Start = v0x * v1y - v1x * v0y; // v0 x v1
     let crossZP1End = v0x * v2y - v2x * v0y; // v0 x v2
-    // console.log("ep1 to p1: ", [v1x, v1y], "; ep1 to p2: ", [v2x, v2y], "ep1 to ep2: ", [v0x, v0y]);
-    // console.log("crossZP1Start", crossZP1Start);
-    // console.log("crossZP1End", crossZP1End);
-    // console.log("product: ", crossZP1End * crossZP1Start);
-    // console.log("So they are on same side? ", lt(crossZP1Start * crossZP1End, 0));
     return gt(crossZP1Start * crossZP1End, 0);
-}
-function clipLineInArea(edge, rect) {
-    // use Liang-Barsky algorithm (thank you copilot for inspiration)
-    let xMin = rect.getX();
-    let yMin = rect.getY();
-    let xMax = xMin + rect.getW();
-    let yMax = yMin + rect.getH();
-    let x1 = edge.getP1().getX();
-    let y1 = edge.getP1().getY();
-    let x2 = edge.getP2().getX();
-    let y2 = edge.getP2().getY();
-    let dx = x2 - x1;
-    let dy = y2 - y1;
-    let tMin = 0.0;
-    let tMax = 1.0;
-    let p = [-dx, dx, -dx, dx];
-    let q = [x1 - xMin, xMax - x1, y1 - yMin, yMax - y1];
-    for (let i = 0; i < 4; i++) {
-        if (p[i] === 0) {
-            return (q[i] < 0) ? null : edge;
-        }
-        else {
-            let t = q[i] / p[i];
-            if (p[i] < 0) {
-                tMin = Math.max(tMin, t);
-            }
-            else {
-                tMax = Math.min(tMax, t);
-            }
-        }
-    }
-    if (tMin > tMax) {
-        return null;
-    }
-    let newX1 = x1 + tMin * dx;
-    let newY1 = y1 + tMin * dy;
-    let newX2 = x1 + tMax * dx;
-    let newY2 = y1 + tMax * dy;
-    return new QT.Edge(new QT.Point(newX1, newY1), new QT.Point(newX2, newY2));
 }
 function createCarve(shapes, holes) {
     let shapeBoundary = findOutlineBoundary(shapes);
@@ -330,24 +370,6 @@ function createCarve(shapes, holes) {
 }
 function toVector3(point) {
     return new THREE.Vector3(point.getX(), point.getY(), point.getH());
-}
-function toPointsArray(qt) {
-    let result = [];
-    toPointsArrayHelper(qt, result);
-    return result;
-}
-function toPointsArrayHelper(qtNode, result) {
-    for (let i = 0; i < qtNode.getElements().length; i++) {
-        let currPoint = qtNode.getElements()[i];
-        let currVector = new THREE.Vector3(currPoint.getX(), currPoint.getY(), currPoint.getH());
-        result.push(currVector);
-    }
-    let children = qtNode.getChildren();
-    if (children) {
-        for (let i = 0; i < 4; i++) {
-            toPointsArrayHelper(children[i], result);
-        }
-    }
 }
 // as some triangles have their vertices pushed in the wrong order, the normal vector is computed
 // the opposite as expected. I want all the normal vectors to point down (z<0 direction)

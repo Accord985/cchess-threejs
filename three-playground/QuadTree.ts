@@ -106,8 +106,8 @@ class Rectangle {
     } else if (element instanceof Rectangle) {
       let rect: Rectangle = element;
       // edge cases: the new rectangle only shares a side and the remaining is outside. Reject these
-      return !(rect.x + rect.w < this.x || rect.x > this.x + this.w ||  // can't be all left or all right
-          rect.y + rect.h < this.y || rect.y > this.y + this.h);
+      return !(lt(rect.x + rect.w, this.x) || gt(rect.x, this.x + this.w) ||  // can't be all left or all right
+          lt(rect.y + rect.h, this.y) || gt(rect.y, this.y + this.h));
     } else {  // must be type Edge
       let edge: Edge = element;
       let p1x = edge.getP1().getX();  let p1y = edge.getP1().getY();
@@ -131,6 +131,37 @@ class Rectangle {
       let yOverlap = this.findOverlap(edge.computeYOnEdge(xOverlap[0]), edge.computeYOnEdge(xOverlap[1]), this.y, this.y + this.h);
       return le(yOverlap[0], yOverlap[1]);
     }
+  }
+
+  // try this method for checking edges??
+  private clipLineInArea(edge: Edge, rect: Rectangle): Edge | null {
+    // use Liang-Barsky algorithm (thank you copilot for inspiration)
+    let xMin = rect.getX(); let yMin = rect.getY();
+    let xMax = xMin + rect.getW(); let yMax = yMin + rect.getH();
+    let x1 = edge.getP1().getX(); let y1 = edge.getP1().getY();
+    let x2 = edge.getP2().getX(); let y2 = edge.getP2().getY();
+    let dx = x2 - x1; let dy = y2 - y1;
+    let tMin = 0.0; let tMax = 1.0;
+    let p = [-dx, dx, -dx, dx];
+    let q = [x1 - xMin, xMax - x1, y1 - yMin, yMax - y1];
+    for (let i = 0; i < 4; i++) {
+      if (p[i] === 0) {
+        return (q[i] < 0) ? null : edge;
+      } else {
+        let t = q[i] / p[i];
+        if (p[i] < 0) {
+          tMin = Math.max(tMin, t);
+        } else {
+          tMax = Math.min(tMax, t);
+        }
+      }
+    }
+    if (tMin > tMax) { return null; }
+    let newX1 = x1 + tMin * dx;
+    let newY1 = y1 + tMin * dy;
+    let newX2 = x1 + tMax * dx;
+    let newY2 = y1 + tMax * dy;
+    return new Edge(new Point(newX1, newY1), new Point(newX2, newY2));
   }
 
   private findOverlap(start1: number, end1: number, start2: number, end2: number): number[] {  // check if 2 ranges of values overlap. the values don't need to be from small to large
@@ -228,6 +259,9 @@ class QuadTree<T extends Point | Edge> {
   // only applies to QuadTree of Point.
   // retrieves the element with given x and y. I assume that only one such element exists.
   retrieve(queryX: number, queryY: number): Point | null {
+    if (this.elements[0] && !(this.elements[0] instanceof Point)) {
+      throw new Error("retrieve only works for quad tree of points");
+    }
     let queryPoint = new Point(queryX, queryY);
     if (!this.boundary.contains(queryPoint)) {return null;}
     for (let i = 0; i < this.elements.length; i++) {

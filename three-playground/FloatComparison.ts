@@ -1,5 +1,5 @@
 // these functions are for precise float point comparison.
-const THRESHOLD = 1e-10;
+const THRESHOLD = 1e-8;
 
 function compareFloat(left: number, right: number): number {
   if (Math.abs(left - right) < THRESHOLD) {
