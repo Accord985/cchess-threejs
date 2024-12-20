@@ -60,7 +60,7 @@ import { createTextCarve } from './createTextCarve.js';
     // line.material.transparent = true;
     // scene.add( line );
 
-    // let points = new THREE.Points(betterGeometry, new THREE.PointsMaterial({size: 1.5}));
+    // let points = new THREE.Points(geometry, new THREE.PointsMaterial({size: 1}));
     // scene.add(points);
 
     let material = new THREE.MeshPhongMaterial({
@@ -105,7 +105,7 @@ import { createTextCarve } from './createTextCarve.js';
       depth: 0.4, height: 0.4
     };
     // 帥將王仕士侍相象像馬車炮兵卒勇岩
-    const geometry = new TextGeometry('相', settings);
+    const geometry = new TextGeometry('帥', settings);
     return geometry;
   }
 })();

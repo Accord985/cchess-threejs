@@ -244,5 +244,16 @@ class QuadTree {
         }
         return result;
     }
+    // expensive function as it traverses through all elements no matter if it is necessary. Only use this to traverse
+    forEach(f) {
+        for (let i = 0; i < this.elements.length; i++) {
+            f(this.elements[i]);
+        }
+        if (this.children) {
+            for (let i = 0; i < 4; i++) {
+                this.children[i].forEach(f);
+            }
+        }
+    }
 }
 export { Point, Edge, Rectangle, QuadTree };
