@@ -6,13 +6,9 @@
 
 'use strict';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { BasicScene } from './BasicScene.js';
 
 (function() {
-  const VIEW_WIDTH = 450;
-  const VIEW_HEIGHT = 500;
-  const aspect = VIEW_WIDTH / VIEW_HEIGHT;
-  const frustumSize = 500;
   let highLightInstanceId = -1;
   let selectedInstanceId = -1;
   let selectTransform = calcTransformMatrix();
@@ -20,7 +16,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
   function calcTransformMatrix() {
     let result = new THREE.Matrix4();
-    result.multiply(new THREE.Matrix4().makeRotationX(-Math.PI / 18));  // apply rotation transformation
+    result.multiply(new THREE.Matrix4().makeRotationX(THREE.MathUtils.degToRad(-20)));  // apply rotation transformation
     result.multiply(new THREE.Matrix4().makeScale(1.1, 1.1, 1.1));
     result.multiply(new THREE.Matrix4().makeTranslation(0,0,2.4));
     return result;
@@ -31,29 +27,11 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
   console.log(`Finished, spent ${Date.now()-start}ms`);
 
   function init() {
-    // basic setup: camera, scene, renderer, and control
-    let camera = new THREE.OrthographicCamera(frustumSize*aspect/-2,frustumSize*aspect/2,frustumSize/2,frustumSize/-2,0.1,2000);
-    // let camera = new THREE.PerspectiveCamera();
-    let scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xcfbc46);
-    scene.add(camera);
-    let renderer = new THREE.WebGLRenderer();
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(450, 500);
-    document.body.appendChild(renderer.domElement);
-    let control = new OrbitControls(camera, renderer.domElement);
-    camera.position.set(0,-200,250);
-    camera.lookAt(0,0,0);
-    control.update();
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2(1, 1);
-    renderer.domElement.addEventListener('mousemove', (event) => {
-      event.preventDefault();
-      // normalize to [-1,1]
-      mouse.x = (event.offsetX / VIEW_WIDTH) * 2 - 1;  // offsetX: the x coord within the element
-      mouse.y = - (event.offsetY / VIEW_HEIGHT) * 2 + 1;
-    });
-    renderer.domElement.addEventListener('click', () => {
+    const basicScene = new BasicScene({hasControls: true, hasRaycaster: true});
+    let scene = basicScene.scene;
+    let raycaster = basicScene.raycaster;
+    document.body.appendChild(basicScene.domElement);
+    basicScene.domElement.addEventListener('click', () => {
       const intersects = raycaster.intersectObject(pieces);
       if (intersects.length > 0 && selectedInstanceId !== intersects[0].instanceId) {
         let instanceId = intersects[0].instanceId;
@@ -73,15 +51,6 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
       pieces.setMatrixAt(instanceId, pieceMatrix);
       pieces.instanceMatrix.needsUpdate = true;
     }
-
-    // lighting
-    let light = new THREE.DirectionalLight(0xffffff, 4);  // dark-mode: 2
-    light.position.set(0,-8,16);
-    scene.add(light);
-    // let helper = new THREE.DirectionalLightHelper(light);
-    // scene.add(helper);
-    let ambient = new THREE.AmbientLight(0xbbbbbb, 2);
-    scene.add(ambient);
 
     // create a drum-shape piece with surface radius 15, thinkness 16, and largest radius at the center plane 20.
     // built-in Extrude geometry uses an unknown path for the bevel. The uv attributes are unknown.
@@ -116,9 +85,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
     function animate() {
       requestAnimationFrame(animate);
-      control.update();
-
-      raycaster.setFromCamera(mouse, camera);
+      basicScene.control?.update();
+      basicScene.updateRaycaster();
       const intersects = raycaster.intersectObject(pieces);
       if (intersects.length > 0) {
         let instanceId = intersects[0].instanceId;
@@ -133,7 +101,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         pieces.instanceColor.needsUpdate = true;
         highLightInstanceId = -1;
       }
-      renderer.render(scene, camera);
+      basicScene.render();
     }
   }
 

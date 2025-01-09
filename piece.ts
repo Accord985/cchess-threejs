@@ -12,8 +12,8 @@
  * // TODO: use appearance manager to deal with font/segment/engrave/base.
  */
 import * as THREE from 'three';
-import {FontLoader} from 'three/examples/jsm/loaders/FontLoader';
-import {TextGeometry} from 'three/examples/jsm/geometries/TextGeometry';
+import {FontLoader} from 'three/addons/loaders/FontLoader';
+import {TextGeometry} from 'three/addons/geometries/TextGeometry';
 
 type ChessType = "K" | "G" | "E" | "N" | "R" | "C" | "P" | "S";
 type ChessTeam = 0 | 1 | 2 | 3;

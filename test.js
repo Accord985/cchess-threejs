@@ -14,8 +14,8 @@ import {DumbCChess, FlatCChess} from './util/cchess.ts';
     return document.getElementById(idName);
   }
 
-  async function init() {
-    let game = await CasualSandbox.initialize();
+  function init() {
+    let game = CasualSandbox.initialize();
     let cchess = new FlatCChess(game);
     id('game-container').appendChild(cchess.getGameElement());
     cchess.displayCheck();

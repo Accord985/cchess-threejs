@@ -1,3 +1,5 @@
+import layouts from "util-layouts";
+
 type LayoutTemplate = {
   "official": number[][],
   "stable": number[][],
@@ -73,12 +75,9 @@ export class CasualSandbox implements AbstractGame {
     this._layout = layout;
   }
 
-  static async initialize(): Promise<CasualSandbox> {
+  static initialize(): CasualSandbox {
     try {
-      let resp: Response = await fetch("/util/layouts.json");
-      resp = await statusCheck(resp);
-      let result: LayoutTemplate = await resp.json();
-      return new CasualSandbox(result.official);
+      return new CasualSandbox(layouts.official);
     } catch(e) {
       console.error(e);
       let emptyLayout: number[][] = new Array(10);
@@ -399,9 +398,9 @@ export class CasualSandbox implements AbstractGame {
   }
 }
 
-async function statusCheck(res: Response): Promise<Response> {
-  if (!res.ok) {
-    throw new Error(await res.text());
-  }
-  return res;
-}
+// async function statusCheck(res: Response): Promise<Response> {
+//   if (!res.ok) {
+//     throw new Error(await res.text());
+//   }
+//   return res;
+// }

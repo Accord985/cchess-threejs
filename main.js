@@ -24,6 +24,8 @@ import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import {Piece} from './piece.ts';
 import Stats from 'three/addons/libs/stats.module.js';
 
+import layouts from './layouts.json';
+
 (function() {
   window.addEventListener('load', init);
 
@@ -56,7 +58,7 @@ import Stats from 'three/addons/libs/stats.module.js';
     document.getElementById('loading').classList.remove('hidden');
     const textureLoader = new THREE.TextureLoader();
 
-    scene.background = textureLoader.load('pic/background.jpg');
+    scene.background = textureLoader.load('/pic/background.jpg');
     setLighting();
 
     console.log(`Creating board: ${Date.now() - start}ms`);
@@ -150,7 +152,7 @@ import Stats from 'three/addons/libs/stats.module.js';
   function createBoardBase(textureLoader) {
     const group = new THREE.Group();
 
-    const texture = textureLoader.load('pic/whiteoak.jpg');
+    const texture = textureLoader.load('/pic/whiteoak.jpg');
     texture.colorSpace = THREE.SRGBColorSpace;
     const geometry = new THREE.BoxGeometry(48,54.4,4); // TODO in README: chessboard:45*50 centered, add 1.5/2 in edges, and add 0.4 at far side
     const base = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffffff,map:texture})); // the color is a filter
@@ -168,7 +170,7 @@ import Stats from 'three/addons/libs/stats.module.js';
     group.add(shadow);
 
     const geometry3 = new THREE.PlaneGeometry(45, 50);
-    const lightTexture = textureLoader.load('pic/board-lighting.svg');
+    const lightTexture = textureLoader.load('/pic/board-lighting.svg');
     const light = new THREE.Mesh(geometry3, new THREE.MeshBasicMaterial({color: 0xffffff,map: lightTexture, transparent: true}))
     light.position.z = 0.01;
     group.add(light);
@@ -181,7 +183,7 @@ import Stats from 'three/addons/libs/stats.module.js';
    * @returns {THREE.Mesh} - the grid of the board
    */
   function createGrid(textureLoader) {
-    const texture = textureLoader.load('pic/board.svg');
+    const texture = textureLoader.load('/pic/board.svg');
     const geometry = new THREE.PlaneGeometry(45,50);
     const pattern = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: TEXT_COLOR, map: texture, transparent:true}));
     pattern.position.z = 0.02; // 0.01 away from surrounding objects so that there's no coord conflict issues. From down to up: board-base, highlight, grid, shadow
@@ -196,7 +198,7 @@ import Stats from 'three/addons/libs/stats.module.js';
     const textGroup = new THREE.Group();
     const fontLoader = new FontLoader();
     try {
-      const font = await fontLoader.loadAsync('util/fonts/fz-ht-kai.json');
+      const font = await fontLoader.loadAsync('/util/fonts/fz-ht-kai.json');
       const settings = {font:font, size:3,depth:0, bevelEnabled:true,bevelThickness:0,bevelSize:0.05};
       const leftText = generateTextAt('楚河', settings, -10, 0);
       const rightText = generateTextAt('汉界', settings, 10, 0);
@@ -206,7 +208,7 @@ import Stats from 'three/addons/libs/stats.module.js';
       console.error(err);
     }
     try {
-      const font = await fontLoader.loadAsync('util/fonts/heiti.json');
+      const font = await fontLoader.loadAsync('/util/fonts/heiti.json');
       const settings = {font:font, size: 1.3, depth:0, bevelEnabled: true, bevelThickness:0, bevelSize: 0.05};
       const NUMS = "一二三四五六七八九";
       for (let i = 0; i < 9; i++) {
@@ -250,10 +252,7 @@ import Stats from 'three/addons/libs/stats.module.js';
    */
   async function layoutByName(layoutName) {
     try {
-      let resp = await fetch('layouts.json');
-      resp = await statusCheck(resp);
-      resp = await resp.json();
-      let layout = resp[layoutName];
+      let layout = layouts[layoutName];
       if (!layout) {
         throw new Error("unable to find layout: " + layoutName);
       }
@@ -508,10 +507,10 @@ import Stats from 'three/addons/libs/stats.module.js';
    * @returns {Object} - the same response from that api
    * @throws {Error} the error message in the response
    */
-  async function statusCheck(res) {
-    if (!res.ok) {
-      throw new Error(await res.text());
-    }
-    return res;
-  }
+  // async function statusCheck(res) {
+  //   if (!res.ok) {
+  //     throw new Error(await res.text());
+  //   }
+  //   return res;
+  // }
 })();

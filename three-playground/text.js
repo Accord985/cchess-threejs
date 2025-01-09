@@ -9,8 +9,6 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { createTextCarve } from './createTextCarve.js';
-// import * as TCC from './createTextCarve.js';
-// import './createTextCarve.js';
 
 (async function() {
   const VIEW_WIDTH = 450;
@@ -35,7 +33,7 @@ import { createTextCarve } from './createTextCarve.js';
     renderer.setSize(450, 500);
     document.body.appendChild(renderer.domElement);
     let control = new OrbitControls(camera, renderer.domElement);
-    camera.position.set(0,0,250);  // 0, -200, 250
+    camera.position.set(0, -200, 250);  // 0, -200, 250
     camera.lookAt(0,0,0);
     control.update();
 
@@ -48,50 +46,34 @@ import { createTextCarve } from './createTextCarve.js';
     let ambient = new THREE.AmbientLight(0xbbbbbb, 2);
     scene.add(ambient);
 
-    let geometry = await createTextGeometry();
-    let betterGeometry = createTextCarve(geometry);
-    geometry.dispose();
-    geometry = betterGeometry;
-
-    // let wireframe = new THREE.WireframeGeometry(geometry);
-    // const line = new THREE.LineSegments( wireframe );
-    // line.material.depthTest = false;
-    // line.material.opacity = 0.25;
-    // line.material.transparent = true;
-    // scene.add( line );
-
-    // let points = new THREE.Points(geometry, new THREE.PointsMaterial({size: 1}));
-    // scene.add(points);
-
     let material = new THREE.MeshPhongMaterial({
       side: THREE.BackSide,
       color: 0xcc3333,
       specular: 0x3c3c3c,
       shininess: 30,
     });
-    let pieces = new THREE.Mesh(geometry, material);
-    // console.log(geometry);
-    scene.add(pieces);
+    let chars = "帥將王仕士侍相象像馬車炮兵卒勇岩";
+    let n = chars.length;
+    let meshes = [];
+    for (let i = 0; i < n; i++) {
+      let geometry = await createTextGeometry(chars[i]);
+      // let betterGeometry = createTextCarve(geometry);
+      // geometry.dispose();
+      // geometry = betterGeometry;
 
-    // let points = [];
-    // for (let i = 0; i < 128; i++) {
-    //   let currX = findNthSampleValue(2.926, 16.12092, i);
-    //   for (let j = 0; j < 128; j++) {
-    //     let currY = findNthSampleValue(-2.9978, 21.1428, j);
-    //     points.push(new THREE.Vector3(currX, currY, 0));
-    //   }
-    // }
-    // let bufferGeo = new THREE.BufferGeometry().setFromPoints(points);
-    // scene.add(new THREE.Points(bufferGeo, new THREE.PointsMaterial({size: 2})));
+      let currMesh = new THREE.InstancedMesh(geometry, material, 2);
+      let tempObj = new THREE.Object3D();
+      tempObj.position.set((i - n / 2) * 50, -0.5 * 50, 0);
+      tempObj.updateMatrix();
+      currMesh.setMatrixAt(0, tempObj.matrix);
+      tempObj.position.set((i - n / 2) * 50, 0.5 * 50, 0);
+      tempObj.updateMatrix();
+      currMesh.setMatrixAt(1, tempObj.matrix);
 
-    // let bufferGeo2 = new THREE.BufferGeometry().setFromPoints([
-    //   new THREE.Vector2(2.98897234375, 5.01333),
-    // ]);
-    // scene.add(new THREE.Points(bufferGeo2, new THREE.PointsMaterial({size: 4, color: 0xffff00})));
-
-
-    // geometry.dispose();
-    // material.dispose();
+      meshes.push(currMesh);
+      scene.add(currMesh);
+    }
+    material.dispose();
 
     animate();
 
@@ -102,25 +84,16 @@ import { createTextCarve } from './createTextCarve.js';
     }
   }
 
-  async function createTextGeometry() {
+  async function createTextGeometry(char) {
+    if (char.length !== 1) { throw new Error("Only one character is accepted"); }
     let font = await loader.loadAsync('ar-yankai.json');
     const settings = {
       font: font,
-      size: 16,
+      size: 30,
       depth: 0.4, height: 0.4
     };
     // 帥將王仕士侍相象像馬車炮兵卒勇岩
-    const geometry = new TextGeometry('馬', settings);
+    const geometry = new TextGeometry(char, settings);
     return geometry;
   }
 })();
-
-function findNthSampleValue(min , rangeSpan, n) {
-  if (!Number.isInteger(n) || !Number.isInteger(128)) {
-    throw new Error("index n and resolution should both be integers");
-  }
-  if (n >= 128 || n < 0) {
-    throw new Error("n should be 0-based index from 0 to resolution-1");
-  }
-  return min + (n + 0.5) / 128 * rangeSpan;
-}

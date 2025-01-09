@@ -8,7 +8,7 @@ import {gt, eq, ne, le, lt} from './FloatComparison.js';
 
 // better be 2^n. I guess that's faster.
 // Too small values might result in large imprecision or even errors.
-const RESOLUTION = 128;
+const RESOLUTION = 32;
 const HEIGHT_FACTOR = 0.15;
 
 type Outline = {
@@ -206,7 +206,6 @@ function findClosestSample(px: number, py: number, halfWidth: number, halfHeight
 
 function selfConnect(pathPoint: THREE.Vector2, closestSamples: QT.Point[], pointsBuffer: THREE.Vector3[]) {
   if (closestSamples.length > 1) {
-    console.log("self-connecting...", closestSamples);
     let startVec = new THREE.Vector3(pathPoint.x, pathPoint.y, 0);
     for (let i = 0; i < closestSamples.length - 1; i++) {
       pointsBuffer.push(toVector3(closestSamples[i]), toVector3(closestSamples[i+1]), startVec);
@@ -229,7 +228,7 @@ function interConnect(start: THREE.Vector2, end: THREE.Vector2, startClosests: Q
       heightStep: number, samplesInShape: QT.QuadTree<QT.Point>): void {
   // didn't consider if start & end have more than 1 not shared element
   if (startClosests.length === 0 || endClosests.length === 0) {
-    console.warn("edge with ", start, end, " is omitted");
+    // console.warn("edge with ", start, end, " is omitted");
     return;
   }
   // removeShared(startClosest, endClosest);
@@ -265,7 +264,7 @@ function interConnect(start: THREE.Vector2, end: THREE.Vector2, startClosests: Q
       previous = startClosest;
       retrieved = samplesInShape.retrieve(startClosest.getX() + Math.sign(widthUnits) * widthStep, startClosest.getY());
       for (let i = 0; i < n; i++) {
-        if (!retrieved) { console.log("i ",i,", n ",n); continue; }  // why would this happen???
+        if (!retrieved) { continue; }  // why would this happen???
         pointsBuffer.push(toVector3(retrieved), toVector3(previous), toVector3(endClosest));
         previous = retrieved;
         retrieved = samplesInShape.retrieve(previous.getX() + Math.sign(widthUnits) * widthStep, previous.getY());
@@ -275,7 +274,7 @@ function interConnect(start: THREE.Vector2, end: THREE.Vector2, startClosests: Q
       previous = startClosest;
       retrieved = samplesInShape.retrieve(startClosest.getX(), startClosest.getY() + Math.sign(heightUnits) * heightStep);
       for (let i = 0; i < n; i++) {
-        if (!retrieved) { console.log("i ",i,", n ",n); continue; }  // why would this happen???
+        if (!retrieved) { continue; }  // why would this happen???
         pointsBuffer.push(toVector3(retrieved), toVector3(previous), toVector3(endClosest));
         previous = retrieved;
         retrieved = samplesInShape.retrieve(previous.getX(), previous.getY() + Math.sign(heightUnits) * heightStep);
@@ -286,7 +285,7 @@ function interConnect(start: THREE.Vector2, end: THREE.Vector2, startClosests: Q
       previous = endClosest;
       retrieved = samplesInShape.retrieve(endClosest.getX() - Math.sign(widthUnits) * widthStep, endClosest.getY());
       for (let i = 0; i < n; i++) {
-        if (!retrieved) { console.log("i ",i,", n ",n); continue; }  // why would this happen???
+        if (!retrieved) { continue; }  // why would this happen???
         pointsBuffer.push(toVector3(retrieved), toVector3(previous), toVector3(startClosest));
         previous = retrieved;
         retrieved = samplesInShape.retrieve(previous.getX() - Math.sign(widthUnits) * widthStep, previous.getY());
