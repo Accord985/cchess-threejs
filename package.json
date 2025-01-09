@@ -14,11 +14,14 @@
     "test": "nodemon",
     "dev": "sh -c 'tsc --noEmit; vite --port 8000'",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/three": "^0.171.0"
+    "@types/three": "^0.171.0",
+    "gh-pages": "^6.3.0"
   }
 }

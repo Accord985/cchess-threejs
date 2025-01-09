@@ -24,7 +24,13 @@ import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import {Piece} from './piece.ts';
 import Stats from 'three/addons/libs/stats.module.js';
 
-import layouts from './layouts.json';
+import layouts from '/layouts.json';
+import backgroundURL from '/pic/background.jpg';
+import whiteoakURL from '/pic/whiteoak.jpg';
+import boardLightingURL from '/pic/board-lighting.svg';
+import boardURL from '/pic/board.svg';
+import htkai from '/util/fonts/fz-ht-kai.json';
+import heiti from '/util/fonts/heiti.json';
 
 (function() {
   window.addEventListener('load', init);
@@ -58,7 +64,7 @@ import layouts from './layouts.json';
     document.getElementById('loading').classList.remove('hidden');
     const textureLoader = new THREE.TextureLoader();
 
-    scene.background = textureLoader.load('/pic/background.jpg');
+    scene.background = textureLoader.load(backgroundURL);
     setLighting();
 
     console.log(`Creating board: ${Date.now() - start}ms`);
@@ -116,7 +122,7 @@ import layouts from './layouts.json';
    * adds an error message to the site when WebGL implementation is missing.
    */
   function addErrorMsg() {
-    const warning = WebGL.getWebGLErrorMessage();
+    const warning = WebGL.getWebGL2ErrorMessage();
     const message = document.createElement('section');
     message.id = 'graphic-error';
     message.appendChild(warning);
@@ -138,7 +144,7 @@ import layouts from './layouts.json';
     grid.name = 'grid';
     group.add(grid);
 
-    const text = await createText();
+    const text = await createText(whiteoakURL);
     group.add(text);
     return group;
   }
@@ -152,7 +158,7 @@ import layouts from './layouts.json';
   function createBoardBase(textureLoader) {
     const group = new THREE.Group();
 
-    const texture = textureLoader.load('/pic/whiteoak.jpg');
+    const texture = textureLoader.load(whiteoakURL);
     texture.colorSpace = THREE.SRGBColorSpace;
     const geometry = new THREE.BoxGeometry(48,54.4,4); // TODO in README: chessboard:45*50 centered, add 1.5/2 in edges, and add 0.4 at far side
     const base = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffffff,map:texture})); // the color is a filter
@@ -170,7 +176,7 @@ import layouts from './layouts.json';
     group.add(shadow);
 
     const geometry3 = new THREE.PlaneGeometry(45, 50);
-    const lightTexture = textureLoader.load('/pic/board-lighting.svg');
+    const lightTexture = textureLoader.load(boardLightingURL);
     const light = new THREE.Mesh(geometry3, new THREE.MeshBasicMaterial({color: 0xffffff,map: lightTexture, transparent: true}))
     light.position.z = 0.01;
     group.add(light);
@@ -183,7 +189,7 @@ import layouts from './layouts.json';
    * @returns {THREE.Mesh} - the grid of the board
    */
   function createGrid(textureLoader) {
-    const texture = textureLoader.load('/pic/board.svg');
+    const texture = textureLoader.load(boardURL);
     const geometry = new THREE.PlaneGeometry(45,50);
     const pattern = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: TEXT_COLOR, map: texture, transparent:true}));
     pattern.position.z = 0.02; // 0.01 away from surrounding objects so that there's no coord conflict issues. From down to up: board-base, highlight, grid, shadow
@@ -198,7 +204,8 @@ import layouts from './layouts.json';
     const textGroup = new THREE.Group();
     const fontLoader = new FontLoader();
     try {
-      const font = await fontLoader.loadAsync('/util/fonts/fz-ht-kai.json');
+      // const font = await fontLoader.loadAsync('/cchess-threejs/util/fonts/fz-ht-kai.json');
+      const font = fontLoader.parse(htkai);
       const settings = {font:font, size:3,depth:0, bevelEnabled:true,bevelThickness:0,bevelSize:0.05};
       const leftText = generateTextAt('楚河', settings, -10, 0);
       const rightText = generateTextAt('汉界', settings, 10, 0);
@@ -208,7 +215,8 @@ import layouts from './layouts.json';
       console.error(err);
     }
     try {
-      const font = await fontLoader.loadAsync('/util/fonts/heiti.json');
+      // const font = await fontLoader.loadAsync('/cchess-threejs/util/fonts/heiti.json');
+      const font = fontLoader.parse(heiti);
       const settings = {font:font, size: 1.3, depth:0, bevelEnabled: true, bevelThickness:0, bevelSize: 0.05};
       const NUMS = "一二三四五六七八九";
       for (let i = 0; i < 9; i++) {

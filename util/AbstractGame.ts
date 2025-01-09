@@ -1,4 +1,4 @@
-import layouts from "util-layouts";
+import layouts from "./layouts.json";
 
 type LayoutTemplate = {
   "official": number[][],
