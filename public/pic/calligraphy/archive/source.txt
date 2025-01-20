@@ -1,4 +1,7 @@
-字体：https://izihun.com/art-edit/yishu.html
+所有archive中的图片都和项目运行没有关系
+western-piece-design是svg文件。我首先将它们转换成字体文件然后再根据three.js文档中FontLoader的办法转换成可以被three.js使用的json文件（在fonts/western.json）
+
+其他书法字体来源：https://izihun.com/art-edit/yishu.html
 点：https://ch.pinterest.com/pin/920212136330868286/
 圆：https://ch.pinterest.com/pin/838725130602411946/
 泼墨：https://ch.pinterest.com/pin/millions-of-png-images-backgrounds-and-vectors-for-free-download--857724691558496994/
